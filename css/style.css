@@ -1,0 +1,824 @@
+/* ==========================================================================
+   MATEMÁGICOS — Folha de Estilo Principal (Redesign App Moderno em Degradê)
+   Paleta "Meia-Noite Indigo" | Glassmorphism | Mobile-First (min 56px)
+   ========================================================================== */
+
+:root {
+    --bg-fundo: #0F172A;
+    --bg-painel: #1E293B;
+    --neon-azul: #38BDF8;
+    --neon-roxo: #A78BFA;
+    --mult-4x: #FBBF24;
+    --cor-acerto: #22C55E;
+    --cor-erro: #EF4444;
+    --cor-texto: #E2E8F0;
+    --cor-texto-suave: #94A3B8;
+    --borda-glass: rgba(255, 255, 255, 0.15);
+    --bg-glass: rgba(255, 255, 255, 0.06);
+}
+
+/* Reset básico */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+body {
+    background: linear-gradient(160deg, #1E293B 0%, #0F172A 50%, #1E1B4B 100%);
+    color: var(--cor-texto);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    overflow-x: hidden;
+}
+
+/* Container Mobile-First */
+.app-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+/* Controle de exibição das telas */
+.tela {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    animation: surgir 0.22s ease-out;
+}
+
+.oculto {
+    display: none !important;
+}
+
+@keyframes surgir {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================
+   PAINEL PRINCIPAL (Estilo App Moderno em Degradê)
+   ========================================== */
+.painel {
+    background: linear-gradient(180deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.9) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--borda-glass);
+    border-radius: 28px;
+    padding: 20px 18px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 95vh;
+    gap: 14px;
+}
+
+.painel-central {
+    justify-content: center;
+    gap: 22px;
+}
+
+.cabecalho-bloco {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Barra do Aluno no topo do Menu */
+.barra-aluno {
+    background-color: var(--bg-glass);
+    border: 1px solid var(--borda-glass);
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-aluno {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--neon-azul);
+    font-size: 1rem;
+}
+
+/* Tipografia */
+.logo-titulo {
+    text-align: center;
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--neon-azul);
+    text-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+}
+
+.titulo-secao {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--cor-texto);
+}
+
+.subtitulo {
+    text-align: center;
+    color: var(--cor-texto-suave);
+    font-size: 0.98rem;
+}
+
+.texto-pequeno {
+    font-size: 0.88rem;
+    color: var(--cor-texto-suave);
+    text-align: center;
+}
+
+/* Campos de formulário (Identificação) */
+.campo-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.campo-grupo input {
+    min-height: 56px;
+    border-radius: 16px;
+    border: 1px solid var(--borda-glass);
+    background-color: rgba(15, 23, 42, 0.65);
+    color: var(--cor-texto);
+    font-size: 1.1rem;
+    padding: 0 16px;
+    outline: none;
+    user-select: text;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.campo-grupo input:focus {
+    border-color: var(--neon-azul);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.msg-erro {
+    color: var(--cor-erro);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Chips de alunos recentes */
+.alunos-recentes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--borda-glass);
+}
+
+.lista-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.chip-aluno {
+    background-color: var(--bg-glass);
+    color: var(--cor-texto);
+    border: 1px solid var(--neon-roxo);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.chip-aluno:hover {
+    background-color: var(--neon-roxo);
+    color: var(--bg-fundo);
+    font-weight: 700;
+}
+
+/* ==========================================
+   BOTÕES GLASSMORPHISM (Altura mínima 56px)
+   ========================================== */
+.grade-botoes,
+.grade-botoes-secundarios {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn {
+    min-height: 56px;
+    border-radius: 16px;
+    border: 1px solid var(--borda-glass);
+    background-color: var(--bg-glass);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--cor-texto);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.1s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-primario {
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+    color: #052e16;
+    border: none;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.35);
+}
+
+.btn-destaque-azul {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(30, 58, 138, 0.45) 100%);
+    border-color: var(--neon-azul);
+    color: #E0F2FE;
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.15);
+}
+
+.btn-destaque-roxo {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.25) 0%, rgba(76, 29, 149, 0.45) 100%);
+    border-color: var(--neon-roxo);
+    color: #F3E8FF;
+    box-shadow: 0 4px 15px rgba(167, 139, 250, 0.15);
+}
+
+.btn-secundario {
+    background-color: var(--bg-glass);
+    color: var(--cor-texto);
+    border: 1px solid var(--borda-glass);
+}
+
+.btn-operacao {
+    background-color: var(--bg-glass);
+    color: var(--cor-texto);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    justify-content: flex-start;
+    font-size: 1.15rem;
+}
+
+.btn-mestre {
+    border-color: rgba(251, 191, 36, 0.6);
+    color: var(--mult-4x);
+}
+
+.simbolo-op {
+    font-size: 1.4rem;
+    width: 36px;
+    text-align: center;
+}
+
+.btn-pequeno {
+    background-color: var(--bg-glass);
+    color: var(--cor-texto);
+    border: 1px solid var(--borda-glass);
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.divisor {
+    border: none;
+    border-top: 1px solid var(--borda-glass);
+}
+
+.cabecalho-tela {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.badge-modo {
+    background-color: var(--bg-glass);
+    color: var(--neon-roxo);
+    border: 1px solid var(--neon-roxo);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+/* ==========================================
+   TELA DE JOGO — LAYOUT QUIZ APP MODERNO
+   ========================================== */
+.painel-jogo {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 95vh;
+    padding: 16px 16px 18px;
+}
+
+/* 1. Topo estilo Quiz App */
+.jogo-bloco-topo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.topo-quiz {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-fechar-quiz {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid var(--borda-glass);
+    background-color: var(--bg-glass);
+    color: var(--cor-texto);
+    font-size: 1.15rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s, background-color 0.15s;
+}
+
+.btn-fechar-quiz:active {
+    transform: scale(0.92);
+}
+
+.indicador-modalidade {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--cor-texto-suave);
+    text-align: center;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.toggle-ajuda {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--mult-4x);
+    background-color: var(--bg-glass);
+    border: 1px solid var(--borda-glass);
+    padding: 8px 12px;
+    border-radius: 12px;
+}
+
+.toggle-ajuda input {
+    accent-color: var(--mult-4x);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Barra de tempo fina e elegante (6px) */
+.barra-tempo-fundo {
+    width: 100%;
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.barra-tempo-interna {
+    width: 100%;
+    height: 100%;
+    background-color: var(--cor-acerto);
+    border-radius: 999px;
+    transition: width 0.1s linear, background-color 0.25s ease;
+}
+
+/* 2. Centro da Tela: Placar + Multiplicador, Mascote e Conta Gigante */
+.jogo-bloco-centro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex: 1;
+    padding: 8px 0;
+}
+
+.placar-central {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.pontos-destaque {
+    font-size: 1.85rem;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    transition: color 0.2s, text-shadow 0.2s;
+}
+
+.badge-mult {
+    background-color: var(--bg-glass);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 1.15rem;
+    font-weight: 900;
+    border: 2px solid var(--cor-texto);
+    transition: all 0.2s ease;
+}
+
+/* Estados de Cor e Brilho do Placar e Multiplicador (×1, ×2, ×3, ×4) */
+.placar-central.mult-1x .pontos-destaque {
+    color: #E2E8F0;
+    text-shadow: 0 0 10px rgba(226, 232, 240, 0.2);
+}
+
+.placar-central.mult-1x .badge-mult {
+    color: #E2E8F0;
+    border-color: #E2E8F0;
+    box-shadow: 0 0 10px rgba(226, 232, 240, 0.15);
+}
+
+.placar-central.mult-2x .pontos-destaque {
+    color: #22C55E;
+    text-shadow: 0 0 16px rgba(34, 197, 94, 0.55);
+}
+
+.placar-central.mult-2x .badge-mult {
+    color: #22C55E;
+    border-color: #22C55E;
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.45);
+}
+
+.placar-central.mult-3x .pontos-destaque {
+    color: #38BDF8;
+    text-shadow: 0 0 18px rgba(56, 189, 248, 0.65);
+}
+
+.placar-central.mult-3x .badge-mult {
+    color: #38BDF8;
+    border-color: #38BDF8;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+}
+
+.placar-central.mult-4x .pontos-destaque {
+    color: #FBBF24;
+    text-shadow: 0 0 22px rgba(251, 191, 36, 0.8);
+}
+
+.placar-central.mult-4x .badge-mult {
+    color: #FBBF24;
+    border-color: #FBBF24;
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.65);
+    transform: scale(1.06);
+}
+
+/* Mascote leve e centralizado */
+.area-mascote {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.mascote-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 14px;
+    border-radius: 999px;
+    max-width: 100%;
+}
+
+.mascote-avatar {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.mascote-balao {
+    color: var(--cor-texto-suave);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+@keyframes pulsoBalao {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.04);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.balao-animar {
+    animation: pulsoBalao 0.25s ease;
+    color: var(--cor-texto);
+}
+
+/* Operação Matemática Gigante e Centralizada */
+.area-conta {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 8px;
+    width: 100%;
+}
+
+.conta-matematica {
+    font-size: 3.6rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #FFFFFF;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+    line-height: 1;
+}
+
+.display-valor {
+    min-width: 105px;
+    min-height: 76px;
+    background-color: var(--bg-glass);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 2px solid var(--neon-azul);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.4rem;
+    font-weight: 800;
+    color: var(--neon-azul);
+    padding: 0 16px;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+/* Estado de Erro no Display (Flash Vermelho de 0,3s) */
+.display-valor.display-erro {
+    border-color: var(--cor-erro);
+    color: var(--cor-erro);
+    background-color: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 22px rgba(239, 68, 68, 0.45);
+}
+
+@keyframes tremidinha {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-7px);
+    }
+
+    40% {
+        transform: translateX(7px);
+    }
+
+    60% {
+        transform: translateX(-5px);
+    }
+
+    80% {
+        transform: translateX(5px);
+    }
+}
+
+.tremer {
+    animation: tremidinha 0.3s ease-in-out;
+}
+
+.area-ajuda-visual {
+    width: 100%;
+    background-color: rgba(15, 23, 42, 0.55);
+    border: 1px solid var(--borda-glass);
+    border-radius: 16px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ==========================================
+   3. TECLADO VIRTUAL 3x4 ANCORADO (SEM BOTÃO ✓)
+   ========================================== */
+.jogo-bloco-base {
+    width: 100%;
+}
+
+.grade-teclado {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+}
+
+.tecla-num {
+    min-height: 60px;
+    border-radius: 18px;
+    border: 1px solid var(--borda-glass);
+    background-color: var(--bg-glass);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--cor-texto);
+    font-size: 1.65rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.08s, background-color 0.12s, border-color 0.12s;
+}
+
+.tecla-num:active {
+    transform: scale(0.95);
+    border-color: var(--neon-azul);
+    background-color: rgba(56, 189, 248, 0.18);
+}
+
+/* Botão 0 ocupa 2 colunas na última linha */
+.tecla-zero {
+    grid-column: span 2;
+}
+
+/* Botão apagar ocupa a 3ª coluna da última linha */
+.tecla-apagar {
+    color: var(--cor-erro);
+    border-color: rgba(239, 68, 68, 0.35);
+    background-color: rgba(239, 68, 68, 0.08);
+    font-size: 1.45rem;
+}
+
+.tecla-apagar:active {
+    border-color: var(--cor-erro);
+    background-color: rgba(239, 68, 68, 0.25);
+}
+
+/* ==========================================
+   TELA DE CONQUISTAS E RESUMO FIM DE PARTIDA
+   ========================================== */
+.conquistas-header {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.conquistas-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 62vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.conquista-card {
+    background-color: var(--bg-glass);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--borda-glass);
+}
+
+.conquista-card.bloqueada {
+    opacity: 0.45;
+    filter: grayscale(100%);
+}
+
+.conquista-icone {
+    font-size: 2rem;
+}
+
+.conquista-info {
+    flex: 1;
+}
+
+.conquista-info h3 {
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+    color: var(--cor-texto);
+}
+
+.conquista-info p {
+    font-size: 0.78rem;
+    color: var(--cor-texto-suave);
+    margin-bottom: 4px;
+}
+
+.conquista-estrelas span {
+    font-size: 1.1rem;
+    color: #475569;
+}
+
+.conquista-estrelas span.ativa {
+    color: var(--mult-4x);
+}
+
+.resumo-partida {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background-color: var(--bg-glass);
+    border: 1px solid var(--borda-glass);
+    padding: 18px;
+    border-radius: 18px;
+}
+
+.item-resumo {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1rem;
+}
+
+.destaque-valor {
+    color: var(--mult-4x);
+    font-size: 1.35rem;
+}
+
+.aviso-recorde {
+    background-color: rgba(251, 191, 36, 0.15);
+    border: 2px solid var(--mult-4x);
+    color: var(--mult-4x);
+    text-align: center;
+    padding: 12px;
+    border-radius: 16px;
+    font-weight: 800;
+}
+
+/* ==========================================
+   ANIMAÇÃO DE CONFETES (M2)
+   ========================================== */
+.confete {
+    position: fixed;
+    top: -10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    z-index: 9999;
+    pointer-events: none;
+    animation: cairConfete linear forwards;
+}
+
+@keyframes cairConfete {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(105vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Responsividade Desktop (PC) */
+@media (min-width: 768px) {
+    .app-container {
+        max-width: 480px;
+    }
+
+    .painel,
+    .painel-jogo {
+        min-height: 90vh;
+        padding: 24px 24px;
+    }
+
+    .conta-matematica {
+        font-size: 3.8rem;
+    }
+}

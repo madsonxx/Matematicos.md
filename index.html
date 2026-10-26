@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Matemágicos — Aprenda Brincando</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <main class="app-container">
+
+        <!-- 1. TELA DE IDENTIFICAÇÃO / TROCA DE ALUNO -->
+        <section id="tela-identificacao" class="tela">
+            <div class="painel painel-central">
+                <div class="cabecalho-bloco">
+                    <h1 class="logo-titulo">✨ Matemágicos</h1>
+                    <p class="subtitulo">Quem vai jogar agora?</p>
+                </div>
+
+                <div class="campo-grupo">
+                    <input type="text" id="input-nome-aluno" placeholder="Digite Nome e Sobrenome" autocomplete="off">
+                    <p id="erro-identificacao" class="msg-erro oculto">Por favor, digite seu Nome e Sobrenome completos.
+                    </p>
+                    <button type="button" id="btn-confirmar-aluno" class="btn btn-primario">Começar a Jogar 🚀</button>
+                </div>
+
+                <div id="container-alunos-recentes" class="alunos-recentes oculto">
+                    <p class="texto-pequeno">Ou escolha seu nome na lista:</p>
+                    <div id="lista-alunos-recentes" class="lista-chips"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. TELA DO MENU PRINCIPAL -->
+        <section id="tela-menu" class="tela oculto">
+            <div class="painel">
+                <!-- Barra superior com aluno atual e troca rápida -->
+                <div class="barra-aluno">
+                    <div class="info-aluno">
+                        <span>👤</span>
+                        <span id="nome-aluno-menu">Aluno</span>
+                    </div>
+                    <button type="button" id="btn-trocar-aluno" class="btn-pequeno">Trocar aluno</button>
+                </div>
+
+                <div class="cabecalho-bloco">
+                    <h1 class="logo-titulo">✨ Matemágicos</h1>
+                    <p class="subtitulo">Escolha como quer praticar hoje</p>
+                </div>
+
+                <!-- Botões principais de Modo -->
+                <div class="grade-botoes">
+                    <button type="button" id="btn-modo-desafio" class="btn btn-destaque-azul">
+                        ⚡ Modo Desafio (30s)
+                    </button>
+                    <button type="button" id="btn-modo-treino" class="btn btn-destaque-roxo">
+                        🎯 Modo Treino (Livre)
+                    </button>
+                </div>
+
+                <hr class="divisor">
+
+                <!-- Botões secundários: Conquistas, Ranking e Som -->
+                <div class="grade-botoes-secundarios">
+                    <button type="button" id="btn-abrir-conquistas" class="btn btn-secundario">
+                        🏆 Minhas Conquistas
+                    </button>
+                    <button type="button" id="btn-abrir-ranking" class="btn btn-secundario">
+                        🥇 Ranking da Turma
+                    </button>
+                    <button type="button" id="btn-alternar-som" class="btn btn-secundario">
+                        🔊 Som: Ligado
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. TELA DE ESCOLHA DA OPERAÇÃO -->
+        <section id="tela-operacao" class="tela oculto">
+            <div class="painel">
+                <div class="cabecalho-tela">
+                    <button type="button" id="btn-voltar-menu" class="btn-pequeno">← Voltar</button>
+                    <span id="badge-modo-escolhido" class="badge-modo">⚡ Modo Desafio</span>
+                </div>
+
+                <h2 class="titulo-secao">Escolha a Operação</h2>
+
+                <div class="grade-botoes">
+                    <button type="button" class="btn btn-operacao" data-operacao="adicao">
+                        <span class="simbolo-op">➕</span> Adição
+                    </button>
+                    <button type="button" class="btn btn-operacao" data-operacao="subtracao">
+                        <span class="simbolo-op">➖</span> Subtração
+                    </button>
+                    <button type="button" class="btn btn-operacao" data-operacao="multiplicacao">
+                        <span class="simbolo-op">✖️</span> Multiplicação
+                    </button>
+                    <button type="button" class="btn btn-operacao" data-operacao="divisao">
+                        <span class="simbolo-op">➗</span> Divisão
+                    </button>
+                    <button type="button" class="btn btn-operacao btn-mestre" data-operacao="mestre">
+                        <span class="simbolo-op">👑</span> Modo Mestre
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. TELA DE JOGO (REDESIGN ESTILO APP MODERNO) -->
+        <section id="tela-jogo" class="tela oculto">
+            <div class="painel painel-jogo">
+
+                <!-- BLOCO SUPERIOR: Topo Quiz App + Barra de Tempo fina -->
+                <div class="jogo-bloco-topo">
+                    <div class="topo-quiz">
+                        <button type="button" id="btn-sair-jogo" class="btn-fechar-quiz"
+                            title="Sair da partida">✕</button>
+                        <span id="info-modo-operacao" class="indicador-modalidade">⚡ Desafio • Adição</span>
+                        <label class="toggle-ajuda">
+                            <input type="checkbox" id="chk-ajuda">
+                            <span>💡 Ajuda</span>
+                        </label>
+                    </div>
+
+                    <div id="container-timer" class="barra-tempo-fundo">
+                        <div id="barra-tempo-preenchimento" class="barra-tempo-interna"></div>
+                    </div>
+                </div>
+
+                <!-- BLOCO CENTRAL: Placar + Multiplicador, Conta Gigante, Mascote e Ajuda -->
+                <div class="jogo-bloco-centro">
+                    <!-- Placar e Multiplicador centralizados com brilho dinâmico -->
+                    <div class="placar-central placar-topo mult-1x" id="container-placar-central">
+                        <span id="jogo-pontos" class="pontos-destaque">0 pts</span>
+                        <span id="jogo-multiplicador" class="badge-mult">×1</span>
+                    </div>
+
+                    <!-- Mascote centralizado e leve -->
+                    <div id="mascote-area-jogo" class="area-mascote"></div>
+
+                    <!-- Operação Matemática Gigante e Centralizada -->
+                    <div class="area-conta">
+                        <span id="texto-conta" class="conta-matematica">2 + 2 =</span>
+                        <div id="display-resposta" class="display-valor">?</div>
+                    </div>
+
+                    <!-- Área de Ajuda Visual (aparece quando 💡 Ajuda está ativo) -->
+                    <div id="container-ajuda-visual" class="area-ajuda-visual oculto"></div>
+                </div>
+
+                <!-- BLOCO INFERIOR: Teclado ancorado embaixo (Sem botão ✓) ou Alternativas de Treino -->
+                <div class="jogo-bloco-base area-interacao">
+                    <!-- Teclado Virtual 3x4 para Modo Desafio (0 ocupa 2 colunas + ⌫ apagar) -->
+                    <div id="container-teclado" class="grade-teclado">
+                        <button type="button" class="tecla-num" data-tecla="1">1</button>
+                        <button type="button" class="tecla-num" data-tecla="2">2</button>
+                        <button type="button" class="tecla-num" data-tecla="3">3</button>
+                        <button type="button" class="tecla-num" data-tecla="4">4</button>
+                        <button type="button" class="tecla-num" data-tecla="5">5</button>
+                        <button type="button" class="tecla-num" data-tecla="6">6</button>
+                        <button type="button" class="tecla-num" data-tecla="7">7</button>
+                        <button type="button" class="tecla-num" data-tecla="8">8</button>
+                        <button type="button" class="tecla-num" data-tecla="9">9</button>
+                        <button type="button" class="tecla-num tecla-zero" data-tecla="0">0</button>
+                        <button type="button" class="tecla-num tecla-apagar" data-tecla="apagar">⌫</button>
+                    </div>
+
+                    <!-- Container de 3 alternativas para o Modo Treino (M3) -->
+                    <div id="container-treino" class="grade-botoes oculto"></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 5. TELA DE FIM DE PARTIDA -->
+        <section id="tela-fim" class="tela oculto">
+            <div class="painel painel-central">
+                <h2 class="titulo-secao">🎉 Fim de Partida!</h2>
+
+                <div id="badge-novo-recorde" class="aviso-recorde oculto">
+                    🏆 NOVO RECORDE PESSOAL!
+                </div>
+
+                <div class="resumo-partida">
+                    <div class="item-resumo">
+                        <span>Pontuação:</span>
+                        <strong id="fim-pontos" class="destaque-valor">0 pts</strong>
+                    </div>
+                    <div class="item-resumo">
+                        <span>Seu Recorde:</span>
+                        <strong id="fim-recorde">0 pts</strong>
+                    </div>
+                    <div class="item-resumo">
+                        <span>Acertos:</span>
+                        <strong id="fim-acertos">0</strong>
+                    </div>
+                    <div class="item-resumo">
+                        <span>Melhor Sequência:</span>
+                        <strong id="fim-sequencia">0 seguidos</strong>
+                    </div>
+                </div>
+
+                <div class="grade-botoes">
+                    <button type="button" id="btn-jogar-novamente" class="btn btn-primario">
+                        🔄 Jogar de Novo
+                    </button>
+                    <button type="button" id="btn-fim-menu" class="btn btn-secundario">
+                        🏠 Voltar ao Menu
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. TELA DE CONQUISTAS -->
+        <section id="tela-conquistas" class="tela oculto">
+            <div class="painel">
+                <div class="cabecalho-tela">
+                    <button type="button" id="btn-fechar-conquistas" class="btn-pequeno">← Voltar</button>
+                    <span class="badge-modo">🏆 Conquistas</span>
+                </div>
+                <div id="container-conquistas"></div>
+            </div>
+        </section>
+
+        <!-- 7. TELA DE RANKING DA TURMA -->
+        <section id="tela-ranking" class="tela oculto">
+            <div class="painel">
+                <div class="cabecalho-tela">
+                    <button type="button" id="btn-fechar-ranking" class="btn-pequeno">← Voltar</button>
+                    <span class="badge-modo">🥇 Top 10 da Turma</span>
+                </div>
+                <h2 class="titulo-secao">Ranking da Turma</h2>
+                <p class="subtitulo">Em breve no Marco 5!</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Ordem estrita de carregamento definida no DECISOES.md -->
+    <script src="js/config.js"></script>
+    <script src="js/dados.js"></script>
+    <script src="js/som.js"></script>
+    <script src="js/motor.js"></script>
+    <script src="js/visual.js"></script>
+    <script src="js/mascotes.js"></script>
+    <script src="js/conquistas.js"></script>
+    <script src="js/teclado.js"></script>
+    <script src="js/modos.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
