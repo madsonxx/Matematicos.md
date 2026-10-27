@@ -4,20 +4,32 @@
    ========================================================================== */
 
 window.Dados = {
-  // Estrutura padrão caso o localStorage ainda esteja vazio
   _criarEstadoInicial: function () {
     return {
       alunoAtual: '',
       somAtivo: true,
-      alunos: {} // Dicionário indexado pelo "nome sobrenome" em minúsculas
+      alunos: {}
     };
   },
 
-  // Cria a ficha limpa para um novo aluno
   _criarPerfilAluno: function (nomeExibicao) {
     return {
       nomeExibicao: nomeExibicao,
       degrauPorOperacao: {
+        adicao: 0,
+        subtracao: 0,
+        multiplicacao: 0,
+        divisao: 0,
+        mestre: 0
+      },
+      recordesPorOperacao: {
+        adicao: 0,
+        subtracao: 0,
+        multiplicacao: 0,
+        divisao: 0,
+        mestre: 0
+      },
+      rankingEnviadoPorOperacao: {
         adicao: 0,
         subtracao: 0,
         multiplicacao: 0,
@@ -38,7 +50,6 @@ window.Dados = {
     };
   },
 
-  // Lê o banco completo salvo no navegador
   carregarBanco: function () {
     try {
       var bruto = localStorage.getItem(window.CONFIG.CHAVE_STORAGE);
@@ -47,12 +58,11 @@ window.Dados = {
       }
       return JSON.parse(bruto);
     } catch (erro) {
-      console.warn('Aviso: localStorage indisponível ou corrompido. Usando memória temporária.', erro);
+      console.warn('Aviso: localStorage indisponível ou corrompido.', erro);
       return this._criarEstadoInicial();
     }
   },
 
-  // Salva o banco completo no navegador
   salvarBanco: function (banco) {
     try {
       localStorage.setItem(window.CONFIG.CHAVE_STORAGE, JSON.stringify(banco));
@@ -61,7 +71,6 @@ window.Dados = {
     }
   },
 
-  // Normaliza o texto removendo espaços extras e deixando com iniciais maiúsculas
   formatarNomeAluno: function (texto) {
     if (!texto) return '';
     return texto
@@ -74,14 +83,20 @@ window.Dados = {
       .join(' ');
   },
 
-  // Valida se o aluno digitou pelo menos Nome e Sobrenome (mínimo 2 palavras)
+  separarNomeESobrenome: function (nomeExibicao) {
+    var formatado = this.formatarNomeAluno(nomeExibicao);
+    var partes = formatado.split(' ');
+    var nome = partes[0] || '';
+    var sobrenome = partes.slice(1).join(' ') || '';
+    return { nome: nome, sobrenome: sobrenome };
+  },
+
   validarNomeESobrenome: function (texto) {
     var limpo = this.formatarNomeAluno(texto);
     var partes = limpo.split(' ');
     return partes.length >= 2 && partes[0].length >= 2 && partes[1].length >= 2;
   },
 
-  // Define o aluno ativo (criando seu perfil se for a primeira vez no aparelho)
   definirAlunoAtual: function (nomeCompleto) {
     var nomeFormatado = this.formatarNomeAluno(nomeCompleto);
     var chave = nomeFormatado.toLowerCase();
@@ -96,7 +111,6 @@ window.Dados = {
     return banco.alunos[chave];
   },
 
-  // Retorna o objeto do aluno logado no momento (ou null se ninguém estiver logado)
   obterAlunoAtual: function () {
     var banco = this.carregarBanco();
     if (!banco.alunoAtual || !banco.alunos[banco.alunoAtual]) {
@@ -105,7 +119,6 @@ window.Dados = {
     return banco.alunos[banco.alunoAtual];
   },
 
-  // Retorna uma lista com os nomes de todos os alunos já cadastrados neste aparelho
   listarAlunosRecentes: function () {
     var banco = this.carregarBanco();
     var chaves = Object.keys(banco.alunos);
@@ -114,7 +127,6 @@ window.Dados = {
     });
   },
 
-  // Obtém o degrau inicial respeitando a Regra de Veterano (quem atingiu degrau 11 >= 2x começa no mín. no 3)
   obterDegrauOperacao: function (operacao) {
     var aluno = this.obterAlunoAtual();
     if (!aluno) return 0;
@@ -132,7 +144,6 @@ window.Dados = {
     return degrauSalvo;
   },
 
-  // Atualiza e persiste o degrau do aluno atual para a operação escolhida
   salvarDegrauOperacao: function (operacao, novoDegrau, atingiuTopoNestaSubida) {
     var banco = this.carregarBanco();
     var chave = banco.alunoAtual;
@@ -157,7 +168,26 @@ window.Dados = {
     this.salvarBanco(banco);
   },
 
-  // Registra o resumo completo ao final de uma partida do Modo Desafio
+  atualizarRankingEnviado: function (operacao, pontos) {
+    var banco = this.carregarBanco();
+    var chave = banco.alunoAtual;
+    if (!chave || !banco.alunos[chave]) return;
+
+    var aluno = banco.alunos[chave];
+    if (!aluno.rankingEnviadoPorOperacao) {
+      aluno.rankingEnviadoPorOperacao = { adicao: 0, subtracao: 0, multiplicacao: 0, divisao: 0, mestre: 0 };
+    }
+
+    aluno.rankingEnviadoPorOperacao[operacao] = pontos;
+    this.salvarBanco(banco);
+  },
+
+  obterRankingEnviado: function (operacao) {
+    var aluno = this.obterAlunoAtual();
+    if (!aluno || !aluno.rankingEnviadoPorOperacao) return 0;
+    return aluno.rankingEnviadoPorOperacao[operacao] || 0;
+  },
+
   registrarFimDePartida: function (dadosPartida) {
     var banco = this.carregarBanco();
     var chave = banco.alunoAtual;
@@ -172,20 +202,27 @@ window.Dados = {
     var melhorSeq = dadosPartida.melhorSequencia || 0;
     var alcancou4x = !!dadosPartida.alcancou4x;
     var modo = dadosPartida.modo || 'desafio';
+    var operacao = dadosPartida.operacao || 'adicao';
 
-    // Verifica se bateu o recorde pessoal de pontos no Modo Desafio
     var bateuRecorde = false;
-    if (modo === 'desafio' && pontos > (aluno.recordePontos || 0)) {
-      aluno.recordePontos = pontos;
-      bateuRecorde = true;
+    if (modo === 'desafio') {
+      if (pontos > (aluno.recordePontos || 0)) {
+        aluno.recordePontos = pontos;
+        bateuRecorde = true;
+      }
+
+      if (!aluno.recordesPorOperacao) {
+        aluno.recordesPorOperacao = { adicao: 0, subtracao: 0, multiplicacao: 0, divisao: 0, mestre: 0 };
+      }
+      if (pontos > (aluno.recordesPorOperacao[operacao] || 0)) {
+        aluno.recordesPorOperacao[operacao] = pontos;
+      }
     }
 
-    // Atualiza melhor sequência histórica
     if (melhorSeq > (aluno.melhorSequencia || 0)) {
       aluno.melhorSequencia = melhorSeq;
     }
 
-    // Atualiza estatísticas acumuladas (já preparando terreno para as Conquistas do M2)
     if (!aluno.estatisticas) {
       aluno.estatisticas = {
         acertosTotais: 0,
@@ -210,7 +247,6 @@ window.Dados = {
       aluno.estatisticas.acertosTreino += acertos;
     }
 
-    // Registra o dia atual (AAAA-MM-DD) para a conquista de dias ativos
     var hoje = new Date().toISOString().slice(0, 10);
     if (aluno.estatisticas.diasAtivos.indexOf(hoje) === -1) {
       aluno.estatisticas.diasAtivos.push(hoje);
@@ -224,7 +260,6 @@ window.Dados = {
     };
   },
 
-  // Lê e alterna a preferência de Som (🔊 / 🔇)
   obterSomAtivo: function () {
     var banco = this.carregarBanco();
     return banco.somAtivo !== false;
