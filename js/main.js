@@ -41,6 +41,10 @@
             if (idTela === 'tela-conquistas' && window.Conquistas) {
                 window.Conquistas.renderizarTela('container-conquistas');
             }
+
+            if (idTela === 'tela-ranking' && window.Ranking) {
+                window.Ranking.carregarRanking();
+            }
         },
 
         // Abre a tela para digitar Nome e Sobrenome ou escolher um aluno recente
