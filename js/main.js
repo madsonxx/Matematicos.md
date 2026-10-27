@@ -2,9 +2,10 @@
  * ==========================================================================
  * 10. js/main.js — Controle de Telas e Inicialização (window.Main)
  * Conecta os botões do HTML e coordena a navegação entre todas as telas.
+ * Atualizado para o Marco 3 (Modo Treino + Modo Assistido).
  * ==========================================================================
  */
-(function() {
+(function () {
     'use strict';
 
     window.Main = {
@@ -198,6 +199,16 @@
                     var botao = evento.currentTarget;
                     var operacao = botao.getAttribute('data-operacao');
                     self.mostrarTela('tela-jogo');
+
+                    // Inicializa o teclado virtual se estiver no modo desafio
+                    if (window.Teclado && typeof window.Teclado.inicializar === 'function') {
+                        window.Teclado.inicializar(function (valorDigitado) {
+                            if (window.Modos && typeof window.Modos.verificarRespostaDesafio === 'function') {
+                                window.Modos.verificarRespostaDesafio(valorDigitado);
+                            }
+                        });
+                    }
+
                     if (window.Modos && typeof window.Modos.iniciarPartida === 'function') {
                         window.Modos.iniciarPartida(self.modoSelecionado, operacao);
                     }
@@ -213,6 +224,7 @@
                 self.irParaMenu();
             });
 
+            // Conexão do checkbox/toggle "💡 Ajuda" com o gerenciador de Modos
             var chkAjuda = document.getElementById('chk-ajuda');
             if (chkAjuda) chkAjuda.addEventListener('change', function (e) {
                 if (window.Modos && typeof window.Modos.alternarAjudaVisual === 'function') {

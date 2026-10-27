@@ -118,10 +118,7 @@
                         <button type="button" id="btn-sair-jogo" class="btn-fechar-quiz"
                             title="Sair da partida">✕</button>
                         <span id="info-modo-operacao" class="indicador-modalidade">⚡ Desafio • Adição</span>
-                        <label class="toggle-ajuda">
-                            <input type="checkbox" id="chk-ajuda">
-                            <span>💡 Ajuda</span>
-                        </label>
+                        <div class="espacador-topo"></div>
                     </div>
 
                     <div id="container-timer" class="barra-tempo-fundo">
@@ -150,8 +147,17 @@
                     <div id="container-ajuda-visual" class="area-ajuda-visual oculto"></div>
                 </div>
 
-                <!-- BLOCO INFERIOR: Teclado ancorado embaixo (Sem botão ✓) ou Alternativas de Treino -->
+                <!-- BLOCO INFERIOR: Botão Ajuda em destaque acima do Teclado ou das 3 Alternativas -->
                 <div class="jogo-bloco-base area-interacao">
+                    <!-- Botão 💡 Ajuda posicionado logo acima do teclado/alternativas -->
+                    <div class="barra-ajuda-base">
+                        <label class="toggle-ajuda-destaque" for="chk-ajuda">
+                            <input type="checkbox" id="chk-ajuda">
+                            <span class="icone-lampada">💡</span>
+                            <span id="texto-btn-ajuda">Ver Ajuda Visual</span>
+                        </label>
+                    </div>
+
                     <!-- Teclado Virtual 3x4 para Modo Desafio (0 ocupa 2 colunas + ⌫ apagar) -->
                     <div id="container-teclado" class="grade-teclado">
                         <button type="button" class="tecla-num" data-tecla="1">1</button>
@@ -168,7 +174,7 @@
                     </div>
 
                     <!-- Container de 3 alternativas para o Modo Treino (M3) -->
-                    <div id="container-treino" class="grade-botoes oculto"></div>
+                    <div id="container-treino" class="grade-alternativas-treino oculto"></div>
                 </div>
 
             </div>
