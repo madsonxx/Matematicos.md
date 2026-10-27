@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MATEMÁGICOS — Folha de Estilo Principal (Redesign App Moderno em Degradê)
+   MATEMÁGICOS — Folha de Estilo Principal (Marco 4: Responsivo Fino)
    Paleta "Meia-Noite Indigo" | Glassmorphism | Mobile-First (min 56px)
    ========================================================================== */
 
@@ -17,7 +17,7 @@
     --bg-glass: rgba(255, 255, 255, 0.06);
 }
 
-/* Reset básico */
+/* Reset básico corrigido (*) */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -27,21 +27,34 @@
     user-select: none;
 }
 
+html,
+body {
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    /* Impede scroll indesejado durante o jogo */
+}
+
 body {
     background: linear-gradient(160deg, #1E293B 0%, #0F172A 50%, #1E1B4B 100%);
     color: var(--cor-texto);
-    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 10px;
-    overflow-x: hidden;
 }
 
 /* Container Mobile-First */
 .app-container {
     width: 100%;
     max-width: 440px;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
 }
 
 /* Controle de exibição das telas */
@@ -49,6 +62,8 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
+    height: 100%;
+    justify-content: space-between;
     animation: surgir 0.22s ease-out;
 }
 
@@ -82,13 +97,14 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 95vh;
+    height: 100%;
     gap: 14px;
 }
 
 .painel-central {
     justify-content: center;
     gap: 22px;
+    margin: auto 0;
 }
 
 .cabecalho-bloco {
@@ -236,6 +252,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 10px;
+    touch-action: manipulation;
     transition: transform 0.1s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -328,7 +345,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 95vh;
+    height: 100%;
     padding: 16px 16px 18px;
 }
 
@@ -338,6 +355,7 @@ body {
     flex-direction: column;
     gap: 10px;
     width: 100%;
+    flex-shrink: 0;
 }
 
 .topo-quiz {
@@ -407,7 +425,8 @@ body {
     justify-content: center;
     gap: 12px;
     flex: 1;
-    padding: 6px 0;
+    padding: 4px 0;
+    min-height: 0;
 }
 
 .placar-central {
@@ -536,7 +555,7 @@ body {
     justify-content: center;
     align-items: center;
     gap: 16px;
-    padding: 8px;
+    padding: 6px;
     width: 100%;
 }
 
@@ -617,7 +636,9 @@ body {
     background-color: rgba(15, 23, 42, 0.65);
     border: 1px solid rgba(251, 191, 36, 0.35);
     border-radius: 16px;
-    padding: 12px 10px;
+    padding: 10px;
+    max-height: 120px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -632,7 +653,8 @@ body {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .barra-ajuda-base {
@@ -716,7 +738,6 @@ body {
     transform: scale(0.95);
 }
 
-/* Estado Correto no Treino (Verde #22C55E) */
 .btn-alternativa.alternativa-correta {
     background: rgba(34, 197, 94, 0.28) !important;
     border-color: #22C55E !important;
@@ -724,7 +745,6 @@ body {
     box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
 }
 
-/* Estado Errado no Treino (Vermelho e Riscado #EF4444) */
 .btn-alternativa.alternativa-errada {
     background: rgba(239, 68, 68, 0.25) !important;
     border-color: #EF4444 !important;
@@ -733,17 +753,17 @@ body {
     text-decoration-thickness: 3px;
 }
 
-/* Elementos visuais internos da Ajuda (Dominós, Bolinhas, Grades) */
+/* Elementos visuais internos da Ajuda */
 .visual-box {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .visual-dica-texto {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     color: var(--cor-texto);
     text-align: center;
 }
@@ -774,23 +794,23 @@ body {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 10px;
-    padding: 6px 8px;
+    padding: 4px 6px;
     display: flex;
-    gap: 5px;
+    gap: 4px;
     align-items: center;
     justify-content: center;
 }
 
 .visual-sinal {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: var(--cor-texto-suave);
-    margin: 0 4px;
+    margin: 0 2px;
 }
 
 .visual-dot {
-    width: 13px;
-    height: 13px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
     display: inline-block;
 }
@@ -799,24 +819,24 @@ body {
 .dot-divisao,
 .dot-mult-par {
     background: var(--neon-azul);
-    box-shadow: 0 0 6px rgba(56, 189, 248, 0.65);
+    box-shadow: 0 0 5px rgba(56, 189, 248, 0.65);
 }
 
 .dot-b,
 .dot-mult-impar {
     background: var(--neon-roxo);
-    box-shadow: 0 0 6px rgba(167, 139, 250, 0.55);
+    box-shadow: 0 0 5px rgba(167, 139, 250, 0.55);
 }
 
 .dot-ponte-10 {
     background: var(--mult-4x);
-    box-shadow: 0 0 8px rgba(251, 191, 36, 0.95);
+    box-shadow: 0 0 7px rgba(251, 191, 36, 0.95);
     border: 1.5px solid #FEF08A;
 }
 
 .dot-neon-restante {
     background: var(--cor-acerto);
-    box-shadow: 0 0 8px var(--cor-acerto);
+    box-shadow: 0 0 7px var(--cor-acerto);
 }
 
 .dot-subtraido {
@@ -827,19 +847,19 @@ body {
 
 .mult-grid {
     display: grid;
-    gap: 5px;
-    padding: 6px;
+    gap: 4px;
+    padding: 4px;
     background: rgba(255, 255, 255, 0.04);
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .vizinho-pill {
     background: rgba(167, 139, 250, 0.18);
     border: 1px solid rgba(167, 139, 250, 0.4);
     color: #F3E8FF;
-    padding: 0.3rem 0.65rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 8px;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     font-weight: 700;
 }
 
@@ -849,19 +869,19 @@ body {
 .grade-teclado {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
     width: 100%;
 }
 
 .tecla-num {
-    min-height: 58px;
-    border-radius: 18px;
+    min-height: 56px;
+    border-radius: 16px;
     border: 1px solid var(--borda-glass);
     background-color: var(--bg-glass);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: var(--cor-texto);
-    font-size: 1.65rem;
+    font-size: 1.6rem;
     font-weight: 800;
     cursor: pointer;
     display: flex;
@@ -876,17 +896,15 @@ body {
     background-color: rgba(56, 189, 248, 0.18);
 }
 
-/* Botão 0 ocupa 2 colunas na última linha */
 .tecla-zero {
     grid-column: span 2;
 }
 
-/* Botão apagar ocupa a 3ª coluna da última linha */
 .tecla-apagar {
     color: var(--cor-erro);
     border-color: rgba(239, 68, 68, 0.35);
     background-color: rgba(239, 68, 68, 0.08);
-    font-size: 1.45rem;
+    font-size: 1.4rem;
 }
 
 .tecla-apagar:active {
@@ -1012,19 +1030,131 @@ body {
     }
 }
 
-/* Responsividade Desktop (PC) */
-@media (min-width: 768px) {
+/* ==========================================================================
+   MARCO 4 — RESPONSIVO FINO: CELULARES PEQUENOS (ALTURA < 660PX)
+   ========================================================================== */
+@media (max-height: 660px) and (orientation: portrait) {
+
+    .painel,
+    .painel-jogo {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    /* Reduz a fonte da conta matemática para 2.8rem em telas curtas */
+    .conta-matematica {
+        font-size: 2.8rem;
+    }
+
+    .display-valor {
+        min-width: 82px;
+        min-height: 60px;
+        font-size: 2.6rem;
+        padding: 0 10px;
+    }
+
+    .tecla-num {
+        min-height: 56px;
+        /* Mantém toque confortável de 56px */
+        font-size: 1.45rem;
+    }
+
+    .btn-alternativa {
+        min-height: 62px;
+        font-size: 1.8rem;
+    }
+
+    .area-ajuda-visual {
+        max-height: 85px;
+        padding: 6px;
+    }
+}
+
+/* ==========================================================================
+   MARCO 4 — RESPONSIVO FINO: MODO PAISAGEM (HORIZONTAL) EM CELULARES
+   ========================================================================== */
+@media (orientation: landscape) and (max-height: 540px) {
     .app-container {
-        max-width: 480px;
+        max-width: 100%;
+        padding: 6px 12px;
+    }
+
+    .painel-jogo {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto 1fr;
+        gap: 10px;
+        padding: 10px 14px;
+    }
+
+    .jogo-bloco-topo {
+        grid-column: span 2;
+    }
+
+    .jogo-bloco-centro {
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .conta-matematica {
+        font-size: 2.5rem;
+    }
+
+    .display-valor {
+        min-height: 54px;
+        font-size: 2.2rem;
+    }
+
+    .jogo-bloco-base {
+        justify-content: center;
+    }
+
+    .tecla-num {
+        min-height: 46px;
+        font-size: 1.3rem;
+    }
+
+    .btn-alternativa {
+        min-height: 56px;
+        font-size: 1.5rem;
+    }
+}
+
+/* ==========================================================================
+   MARCO 4 — RESPONSIVO FINO: TELAS DE COMPUTADOR (PC)
+   ========================================================================== */
+@media (min-width: 768px) {
+    body {
+        background: radial-gradient(circle at center, #1E1B4B 0%, #0F172A 75%);
+    }
+
+    .app-container {
+        max-width: 460px;
+        height: min(92dvh, 840px);
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow:
+            0 24px 60px rgba(0, 0, 0, 0.65),
+            0 0 40px rgba(56, 189, 248, 0.08);
     }
 
     .painel,
     .painel-jogo {
-        min-height: 90vh;
-        padding: 24px 24px;
+        height: 100%;
+        padding: 24px;
     }
 
     .conta-matematica {
         font-size: 3.8rem;
+    }
+
+    .tecla-num {
+        min-height: 60px;
+        font-size: 1.75rem;
+    }
+
+    .btn-alternativa {
+        min-height: 82px;
+        font-size: 2rem;
     }
 }
