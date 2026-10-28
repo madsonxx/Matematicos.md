@@ -1,10 +1,10 @@
 /* ==========================================================================
-   4. js/motor.js — Sorteio Inteligente e Motor Adaptativo por Exclusão (window.Motor)
+   4. js/motor.js — Motor Adaptativo Estilo "Dota Underlords" + Exclusão (window.Motor)
    Implementa:
-   - 12 Degraus Pedagógicos Reais (0 a 11) com "Regra do 19" no Degrau 3
-   - Diagnóstico por Exclusão 100% em RAM durante a partida (salvo em lote no fim)
-   - Identifica se o gargalo do aluno é "Número Alto" vs "Reagrupamento (Vai 1/Empresta)"
-   - Exclui números infantis (<= 10) quando o aluno já os dominou
+   - Sistema de Roleta de Tiers (1 a 5): mantém alta % de contas básicas rápidas
+     enquanto desbloqueia gradualmente a chance de contas mais desafiadoras.
+   - Regra de Respiro: nunca sorteia duas contas pesadas (Tier 4 ou 5) seguidas!
+   - Diagnóstico por Exclusão 100% em RAM durante a partida.
    ========================================================================== */
 
 window.Motor = {
@@ -13,14 +13,15 @@ window.Motor = {
   degrauAtual: 0,
   indiceCicloSubida: 0,
   acertosSeguidosDegrau: 0,
+  acertosNaPartida: 0,
   acertosSeguidosPartida: 0,
   errosSeguidosDegrau: 0,
   atingiuTopo11NestaPartida: false,
   contasGeradasNaPartida: 0,
+  ultimoTierSorteado: 1,
   ultimaChaveConta: '',
   contaAtual: null,
 
-  // Buffers leves em memória RAM (zero acesso a disco durante a partida)
   diagSessao: null,
   deltasSessao: null,
 
@@ -30,22 +31,22 @@ window.Motor = {
     this.degrauAtual = this.degrauInicialPartida;
     this.indiceCicloSubida = 0;
     this.acertosSeguidosDegrau = 0;
+    this.acertosNaPartida = 0;
     this.acertosSeguidosPartida = 0;
     this.errosSeguidosDegrau = 0;
     this.atingiuTopo11NestaPartida = false;
     this.contasGeradasNaPartida = 0;
+    this.ultimoTierSorteado = 1;
     this.ultimaChaveConta = '';
     this.contaAtual = null;
 
-    // Carrega cópia em RAM do diagnóstico atual do aluno
     this.diagSessao = {
-      adicao: window.Dados.obterDiagnosticoOperacao('adicao'),
-      subtracao: window.Dados.obterDiagnosticoOperacao('subtracao'),
-      multiplicacao: window.Dados.obterDiagnosticoOperacao('multiplicacao'),
-      divisao: window.Dados.obterDiagnosticoOperacao('divisao')
+      adicao: window.Dados.obterDiagnosticoOperacao ? window.Dados.obterDiagnosticoOperacao('adicao') : [0, 0, 0, 0, 0, 0, 0, 0],
+      subtracao: window.Dados.obterDiagnosticoOperacao ? window.Dados.obterDiagnosticoOperacao('subtracao') : [0, 0, 0, 0, 0, 0, 0, 0],
+      multiplicacao: window.Dados.obterDiagnosticoOperacao ? window.Dados.obterDiagnosticoOperacao('multiplicacao') : [0, 0, 0, 0, 0, 0, 0, 0],
+      divisao: window.Dados.obterDiagnosticoOperacao ? window.Dados.obterDiagnosticoOperacao('divisao') : [0, 0, 0, 0, 0, 0, 0, 0]
     };
 
-    // Acumulador de deltas desta partida para gravação única no fim
     this.deltasSessao = {
       adicao: [0, 0, 0, 0, 0, 0, 0, 0],
       subtracao: [0, 0, 0, 0, 0, 0, 0, 0],
@@ -63,85 +64,99 @@ window.Motor = {
     return lista[Math.floor(Math.random() * lista.length)];
   },
 
-  /**
-   * Analisa o vetor [bA, bE, mA, mE, aA, aE, erroSemRes, erroComRes] por EXCLUSÃO:
-   * - dominouBaixa: se acertou >= 6 na faixa <= 10 e taxa >= 80%, exclui números triviais
-   * - gargaloNumeroAlto: se erra muito em números > 25, mas vai bem em números médios
-   * - gargaloReserva: se erra desproporcionalmente quando tem "vai 1" / "empréstimo"
-   */
+  // Analisa o micro-array [bA, bE, mA, mE, aA, aE, erroSemRes, erroComRes] por EXCLUSÃO
   _analisarPerfilPorExclusao: function (opReal) {
     var d = (this.diagSessao && this.diagSessao[opReal]) ? this.diagSessao[opReal] : [0, 0, 0, 0, 0, 0, 0, 0];
-    var bA = d[0], bE = d[1];
     var mA = d[2], mE = d[3];
     var aA = d[4], aE = d[5];
     var erroSemRes = d[6], erroComRes = d[7];
 
-    var totalBaixa = bA + bE;
-    var dominouBaixa = (totalBaixa >= 6) && ((bA / totalBaixa) >= 0.82);
-
-    var totalAlta = aA + aE;
-    var gargaloNumeroAlto = (totalAlta >= 3) && (aE > aA);
-
-    var gargaloReserva = (erroComRes >= 3) && (erroComRes >= (erroSemRes * 1.6));
+    var gargaloMedia = ((mA + mE) >= 4) && (mE > mA);
+    var gargaloNumeroAlto = ((aA + aE) >= 3) && (aE >= aA);
+    var gargaloReserva = (erroComRes >= 3) && (erroComRes > (erroSemRes + 1));
 
     return {
-      dominouBaixa: dominouBaixa,
+      gargaloMedia: gargaloMedia,
       gargaloNumeroAlto: gargaloNumeroAlto,
       gargaloReserva: gargaloReserva
     };
   },
 
-  // Sorteia a faixa efetiva combinando a progressão com o Diagnóstico por Exclusão
-  _obterFaixaAdaptada: function (opReal) {
-    var tabela = window.CONFIG.ADAPTATIVO.TABELA_DEGRAUS;
+  /**
+   * Sorteia o Tier da próxima conta como a Loja do Dota Underlords:
+   * - Usa os acertos na partida + bônus leve do degrau do aluno para definir os pesos [T1, T2, T3, T4, T5]
+   * - Aplica a Regra de Exclusão: se o aluno tem gargalo em Número Alto, zera o peso do Tier 5 e foca no Tier 2/3.
+   * - Regra de Respiro: se a última conta já foi Tier 4 ou 5, a próxima é garantida ser Tier 1 ou 2 (rápida)!
+   */
+  _sortearFaixaUnderlords: function (opReal) {
+    var cfg = window.CONFIG.ADAPTATIVO;
+    var definicoes = cfg.TIERS_DEFINICAO;
+    var tabelaChances = cfg.CHANCES_LOJA_TIERS;
+
+    // As 2 primeiras contas da partida são sempre Tier 1 (aquecimento instantâneo)
+    if (this.contasGeradasNaPartida < 2) {
+      this.ultimoTierSorteado = 1;
+      return definicoes[1];
+    }
+
+    // Regra de Respiro para não sufocar no tempo de 30s:
+    // Depois de uma conta pesada (Tier 4 ou 5), dá uma conta rápida (Tier 1 ou 2)
+    if (this.ultimoTierSorteado >= 4) {
+      var tierRespiro = Math.random() < 0.70 ? 1 : 2;
+      this.ultimoTierSorteado = tierRespiro;
+      return definicoes[tierRespiro];
+    }
+
+    // Calcula os acertos efetivos somando um pequeno bônus se o aluno já for veterano
+    var bonusDegrau = Math.floor(this.degrauAtual / 3) * 2;
+    var progressoLoja = this.acertosNaPartida + bonusDegrau;
+
+    var pesosOriginais = tabelaChances[0].pesos;
+    for (var i = tabelaChances.length - 1; i >= 0; i--) {
+      if (progressoLoja >= tabelaChances[i].minAcertos) {
+        pesosOriginais = tabelaChances[i].pesos;
+        break;
+      }
+    }
+
+    var pesos = pesosOriginais.slice(); // [T1, T2, T3, T4, T5]
     var perfil = this._analisarPerfilPorExclusao(opReal);
 
-    var degrauAlvo = this.degrauAtual;
-
-    // Se ainda não está em sequência alta, 30% das vezes atua cirurgicamente no gargalo
-    if (this.degrauAtual > 0 && this.acertosSeguidosPartida < 6 && Math.random() < 0.30) {
-      degrauAlvo = this.degrauAtual - 1;
+    // EXCLUSÃO: Se o aluno trava em números altos (>25), bloqueia Tier 5 e reduz Tier 3/4, mantendo foco em T1/T2
+    if (perfil.gargaloNumeroAlto) {
+      pesos[1] += pesos[4] + Math.floor(pesos[3] / 2);
+      pesos[3] = Math.ceil(pesos[3] / 2);
+      pesos[4] = 0;
+    } else if (perfil.gargaloMedia) {
+      // Se ainda erra faixa média (11..25), segura no Tier 1 e Tier 2
+      pesos[0] += pesos[3] + pesos[4];
+      pesos[3] = 0;
+      pesos[4] = 0;
     }
 
-    // Exclusão: se o aluno já dominou a faixa baixa (<=10) ou está em streak >= 5, nunca cai nos degraus 0-1
-    if ((perfil.dominouBaixa || this.acertosSeguidosPartida >= 5) && degrauAlvo < 2 && this.degrauAtual >= 2) {
-      degrauAlvo = 2;
+    // Roleta ponderada (soma dos pesos = 100)
+    var somaTotal = 0;
+    for (var p = 0; p < pesos.length; p++) {
+      somaTotal += pesos[p];
     }
 
-    var base = tabela[degrauAlvo] || tabela[0];
+    var sorteio = Math.random() * somaTotal;
+    var acumulado = 0;
+    var tierEscolhido = 1;
 
-    // Clona configuração da faixa para ajustar cirurgicamente se houver gargalo detectado
-    var faixaAjustada = {
-      degrau: base.degrau,
-      somaMin: base.somaMin || 2,
-      somaSubMax: base.somaSubMax,
-      difMax: base.difMax,
-      modoReserva: base.modoReserva || 'opcional',
-      multTabuadas: base.multTabuadas,
-      multFatorMin: base.multFatorMin || 1,
-      multFatorMax: base.multFatorMax,
-      divDivisores: base.divDivisores,
-      divQuocienteMax: base.divQuocienteMax
-    };
-
-    // REGRA DE EXCLUSÃO 1: Problema é Número Alto -> Mantém números baixos/médios e sobe +2 por acerto
-    if (perfil.gargaloNumeroAlto && faixaAjustada.somaSubMax > 28) {
-      var acrescimoGradual = Math.min(25, this.acertosSeguidosPartida * 3);
-      faixaAjustada.somaSubMax = Math.min(faixaAjustada.somaSubMax, 24 + acrescimoGradual);
-      faixaAjustada.somaMin = Math.min(faixaAjustada.somaMin, faixaAjustada.somaSubMax - 8);
+    for (var t = 0; t < pesos.length; t++) {
+      acumulado += pesos[t];
+      if (sorteio <= acumulado) {
+        tierEscolhido = t + 1;
+        break;
+      }
     }
 
-    // REGRA DE EXCLUSÃO 2: Problema é o Reagrupamento (e não número alto) -> Isola reserva em números amigáveis
-    if (perfil.gargaloReserva && !perfil.gargaloNumeroAlto && faixaAjustada.degrau >= 3) {
-      faixaAjustada.modoReserva = 'obrigatorio';
-      faixaAjustada.somaSubMax = Math.min(faixaAjustada.somaSubMax, 36);
-      faixaAjustada.somaMin = Math.min(faixaAjustada.somaMin, 18);
-    }
-
-    return faixaAjustada;
+    this.ultimoTierSorteado = tierEscolhido;
+    return definicoes[tierEscolhido] || definicoes[1];
   },
 
-  // 1. Gerador de ADIÇÃO com respeito estrito aos marcos (Ponte do 10, Regra do 19, Sem/Com Reserva)
+  // 1. Gerador de ADIÇÃO
   _gerarAdicao: function (faixa) {
     var teto = Math.min(99, faixa.somaSubMax);
     var piso = Math.max(2, Math.min(faixa.somaMin || 2, teto - 2));
@@ -150,21 +165,26 @@ window.Motor = {
     var numA = 2, numB = 3, resultado = 5;
     var gerou = false;
 
-    // Caso Especial Degrau 2: Ponte do 10 (duas parcelas de 1 dígito que somam > 10, ex: 7 + 5 = 12)
-    if (modo === 'ponte10') {
-      numA = this._intAleatorio(4, 9);
-      var minB = Math.max(2, 11 - numA);
-      numB = this._intAleatorio(minB, 9);
-      resultado = numA + numB;
+    // Tier 2 ('regra19'): 50% Regra do 19 sem reserva (12+5) e 50% Ponte do 10 simples (7+5)
+    if (modo === 'regra19') {
+      if (Math.random() < 0.55) {
+        numA = this._intAleatorio(10, 16);
+        numB = this._intAleatorio(2, 19 - numA);
+        resultado = numA + numB;
+      } else {
+        numA = this._intAleatorio(5, 9);
+        numB = this._intAleatorio(Math.max(2, 11 - numA), 8);
+        resultado = numA + numB;
+      }
       gerou = true;
     }
 
-    // Caso Com Reagrupamento Obrigatório (uA + uB >= 10)
-    if (!gerou && (modo === 'obrigatorio' || (modo === 'opcional' && Math.random() < 0.6))) {
+    // Tier 4 e 5 ('obrigatorio' — Com "Vai 1")
+    if (!gerou && modo === 'obrigatorio') {
       for (var t = 0; t < 20; t++) {
         var uA = this._intAleatorio(3, 9);
         var uB = this._intAleatorio(10 - uA, 9);
-        var somaUnidades = uA + uB; // Entre 10 e 18
+        var somaUnidades = uA + uB;
         var maxDezenas = Math.floor((teto - somaUnidades) / 10);
 
         if (maxDezenas >= 1) {
@@ -187,44 +207,33 @@ window.Motor = {
       }
     }
 
-    // Caso Sem Reagrupamento ('proibido' — inclui a Regra do 19 no Degrau 3)
+    // Tier 1 e Tier 3 ('proibido' — Sem reagrupamento para cálculo mental rápido)
     if (!gerou && modo === 'proibido') {
       for (var s = 0; s < 20; s++) {
-        if (faixa.degrau === 3) {
-          // Regra do 19: 10..17 + 2..8 sem passar de 19
-          numA = this._intAleatorio(10, 17);
-          numB = this._intAleatorio(2, 19 - numA);
-          resultado = numA + numB;
+        var uA2 = this._intAleatorio(1, 7);
+        var uB2 = this._intAleatorio(1, 9 - uA2);
+        var maxDez2 = Math.floor((teto - (uA2 + uB2)) / 10);
+        var dA2 = maxDez2 > 0 ? this._intAleatorio(0, maxDez2) : 0;
+        var dB2 = (maxDez2 - dA2) > 0 ? this._intAleatorio(0, maxDez2 - dA2) : 0;
+
+        var cA = dA2 * 10 + uA2;
+        var cB = dB2 * 10 + uB2;
+        if (cA >= 1 && cB >= 1 && (cA + cB) >= piso && (cA + cB) <= teto) {
+          numA = cA;
+          numB = cB;
+          resultado = cA + cB;
           gerou = true;
           break;
-        } else {
-          var uA2 = this._intAleatorio(1, 7);
-          var uB2 = this._intAleatorio(1, 9 - uA2);
-          var maxDez2 = Math.floor((teto - (uA2 + uB2)) / 10);
-          var dA2 = maxDez2 > 0 ? this._intAleatorio(0, maxDez2) : 0;
-          var dB2 = (maxDez2 - dA2) > 0 ? this._intAleatorio(0, maxDez2 - dA2) : 0;
-
-          var cA = dA2 * 10 + uA2;
-          var cB = dB2 * 10 + uB2;
-          if (cA >= 1 && cB >= 1 && (cA + cB) >= piso && (cA + cB) <= teto) {
-            numA = cA;
-            numB = cB;
-            resultado = cA + cB;
-            gerou = true;
-            break;
-          }
         }
       }
     }
 
-    // Fallback seguro respeitando piso e teto
     if (!gerou) {
       resultado = this._intAleatorio(piso, teto);
       numA = this._intAleatorio(1, resultado - 1);
       numB = resultado - numA;
     }
 
-    // Alterna ordem das parcelas em 50% das vezes (ex: 12 + 5 ou 5 + 12)
     if (Math.random() < 0.5) {
       var temp = numA;
       numA = numB;
@@ -239,33 +248,39 @@ window.Motor = {
       operacao: 'adicao',
       simbolo: '+',
       resposta: resultado,
+      tier: faixa.tier || 1,
       formatoVertical: true,
       temReagrupamento: temReagrupamento,
       texto: numA + ' + ' + numB + ' ='
     };
   },
 
-  // 2. Gerador de SUBTRAÇÃO com respeito à Regra do 19 (sem empréstimo) e Marcos com Empréstimo
+  // 2. Gerador de SUBTRAÇÃO
   _gerarSubtracao: function (faixa) {
     var teto = Math.min(99, faixa.somaSubMax);
     var piso = Math.max(3, Math.min(faixa.somaMin || 3, teto - 2));
-    var limiteDif = Math.min(faixa.difMax || 30, 35);
+    var limiteDif = Math.min(faixa.difMax || 30, 30);
     var modo = faixa.modoReserva;
 
     var numA = 6, numB = 2, resposta = 4;
     var gerou = false;
 
-    // Caso Degrau 2: Ponte do 10 inversa (ex: 13 - 5 = 8, 15 - 7 = 8)
-    if (modo === 'ponte10') {
-      numA = this._intAleatorio(11, 18);
-      var minSub = (numA % 10) + 1;
-      numB = this._intAleatorio(minSub, 9);
-      resposta = numA - numB;
+    // Tier 2 ('regra19'): Dezena até 19 sem empréstimo (ex: 17 - 5 = 12) ou Ponte 10 (13 - 5 = 8)
+    if (modo === 'regra19') {
+      if (Math.random() < 0.65) {
+        numA = this._intAleatorio(12, 19);
+        numB = this._intAleatorio(2, numA % 10);
+        resposta = numA - numB;
+      } else {
+        numA = this._intAleatorio(11, 16);
+        numB = this._intAleatorio((numA % 10) + 1, 8);
+        resposta = numA - numB;
+      }
       gerou = true;
     }
 
-    // Caso Com Empréstimo Obrigatório (numA >= 20 e uA < uB)
-    if (!gerou && teto >= 20 && (modo === 'obrigatorio' || (modo === 'opcional' && Math.random() < 0.6))) {
+    // Tier 4 e 5 ('obrigatorio' — Com Empréstimo)
+    if (!gerou && teto >= 20 && modo === 'obrigatorio') {
       for (var t = 0; t < 25; t++) {
         var uA = this._intAleatorio(0, 7);
         var uB = this._intAleatorio(uA + 1, 9);
@@ -294,13 +309,13 @@ window.Motor = {
       }
     }
 
-    // Caso Sem Empréstimo ('proibido' — inclui Regra do 19 no Degrau 3: ex 18 - 5 = 13)
+    // Tier 1 e Tier 3 ('proibido' — Sem Empréstimo)
     if (!gerou && modo === 'proibido') {
       for (var s = 0; s < 20; s++) {
         var uA2 = this._intAleatorio(2, 9);
         var uB2 = this._intAleatorio(1, uA2);
         var maxDezA = Math.floor((teto - uA2) / 10);
-        var minDezA = faixa.degrau >= 3 ? 1 : 0;
+        var minDezA = teto >= 20 ? 2 : 0;
         var dA2 = maxDezA >= minDezA ? this._intAleatorio(minDezA, maxDezA) : 0;
         var dB2 = dA2 > 0 ? this._intAleatorio(0, dA2 - (uA2 === uB2 ? 1 : 0)) : 0;
 
@@ -333,13 +348,14 @@ window.Motor = {
       operacao: 'subtracao',
       simbolo: '−',
       resposta: resposta,
+      tier: faixa.tier || 1,
       formatoVertical: true,
       temReagrupamento: temReagrupamento,
       texto: numA + ' − ' + numB + ' ='
     };
   },
 
-  // 3. Gerador de MULTIPLICAÇÃO (Com piso mínimo de fator nos degraus altos para evitar ×1 trivial)
+  // 3. Gerador de MULTIPLICAÇÃO
   _gerarMultiplicacao: function (faixa) {
     var tabuada = this._escolherItem(faixa.multTabuadas);
     var minFator = faixa.multFatorMin || 1;
@@ -356,17 +372,18 @@ window.Motor = {
       operacao: 'multiplicacao',
       simbolo: '×',
       resposta: numA * numB,
+      tier: faixa.tier || 1,
       formatoVertical: false,
       temReagrupamento: false,
       texto: numA + ' × ' + numB + ' ='
     };
   },
 
-  // 4. Gerador de DIVISÃO (Sempre exata, evitando quociente 1 nos degraus avançados)
+  // 4. Gerador de DIVISÃO
   _gerarDivisao: function (faixa) {
     var divisor = this._escolherItem(faixa.divDivisores);
-    var minQuociente = faixa.degrau >= 3 ? 2 : 1;
-    var maxQuociente = Math.max(minQuociente, faixa.divQuocienteMax || 4);
+    var minQuociente = (faixa.tier || 1) >= 3 ? 2 : 1;
+    var maxQuociente = Math.max(minQuociente, faixa.divQuocienteMax || 5);
     var quociente = this._intAleatorio(minQuociente, maxQuociente);
     var dividendo = divisor * quociente;
 
@@ -376,13 +393,13 @@ window.Motor = {
       operacao: 'divisao',
       simbolo: '÷',
       resposta: quociente,
+      tier: faixa.tier || 1,
       formatoVertical: false,
       temReagrupamento: false,
       texto: dividendo + ' ÷ ' + divisor + ' ='
     };
   },
 
-  // Sorteia a próxima conta usando o diagnóstico por exclusão
   sortearConta: function () {
     var operacoesPossiveis = ['adicao', 'subtracao', 'multiplicacao', 'divisao'];
     var conta = null;
@@ -393,16 +410,16 @@ window.Motor = {
         ? this._escolherItem(operacoesPossiveis)
         : this.operacaoEscolhida;
 
-      var faixa = this._obterFaixaAdaptada(opReal);
+      var faixaTier = this._sortearFaixaUnderlords(opReal);
 
       if (opReal === 'adicao') {
-        conta = this._gerarAdicao(faixa);
+        conta = this._gerarAdicao(faixaTier);
       } else if (opReal === 'subtracao') {
-        conta = this._gerarSubtracao(faixa);
+        conta = this._gerarSubtracao(faixaTier);
       } else if (opReal === 'multiplicacao') {
-        conta = this._gerarMultiplicacao(faixa);
+        conta = this._gerarMultiplicacao(faixaTier);
       } else {
-        conta = this._gerarDivisao(faixa);
+        conta = this._gerarDivisao(faixaTier);
       }
 
       tentativas++;
@@ -414,28 +431,25 @@ window.Motor = {
     return conta;
   },
 
-  // Atualiza os contadores de diagnóstico em RAM para a conta atual
   _registrarDiagnosticoEmRAM: function (conta, acertou) {
     if (!conta || !this.diagSessao || !this.deltasSessao) return;
     var op = conta.operacao || 'adicao';
     if (!this.diagSessao[op]) return;
 
-    // Determina a magnitude numérica da conta (Baixa <= 10, Média 11..25, Alta > 25)
     var magnitude = Math.max(Number(conta.numA) || 0, Number(conta.numB) || 0, Number(conta.resposta) || 0);
     var idxAcerto = 0;
     if (magnitude <= 10) {
-      idxAcerto = 0; // Posições 0 (acerto) e 1 (erro)
+      idxAcerto = 0;
     } else if (magnitude <= 25) {
-      idxAcerto = 2; // Posições 2 (acerto) e 3 (erro)
+      idxAcerto = 2;
     } else {
-      idxAcerto = 4; // Posições 4 (acerto) e 5 (erro)
+      idxAcerto = 4;
     }
 
     var posFaixa = acertou ? idxAcerto : (idxAcerto + 1);
     this.diagSessao[op][posFaixa] = Math.min(99, (this.diagSessao[op][posFaixa] || 0) + 1);
     this.deltasSessao[op][posFaixa] += 1;
 
-    // Se errou, classifica se o erro foi em conta SEM reserva (pos 6) ou COM reserva (pos 7)
     if (!acertou) {
       var posReserva = conta.temReagrupamento ? 7 : 6;
       this.diagSessao[op][posReserva] = Math.min(99, (this.diagSessao[op][posReserva] || 0) + 1);
@@ -443,25 +457,21 @@ window.Motor = {
     }
   },
 
-  // Processa acerto ou erro no motor adaptativo (100% em RAM; consolidado no fim da partida)
   registrarResposta: function (acertou) {
     var cfg = window.CONFIG.ADAPTATIVO;
     var mudouDegrau = false;
 
-    // 1. Atualiza o mapa de erros/acertos por exclusão em RAM
     this._registrarDiagnosticoEmRAM(this.contaAtual, acertou);
 
-    // 2. Atualiza progressão dinâmica de degrau
     if (acertou) {
+      this.acertosNaPartida++;
       this.acertosSeguidosDegrau++;
       this.acertosSeguidosPartida++;
       this.errosSeguidosDegrau = 0;
 
-      var ciclo = cfg.CICLO_SUBIDA || [2, 3, 3, 4];
+      var ciclo = cfg.CICLO_SUBIDA || [4, 5, 6, 7];
       var metaAcertos = ciclo[Math.min(this.indiceCicloSubida, ciclo.length - 1)];
-
-      var maxSubida = cfg.MAX_SUBIDA_POR_PARTIDA || 5;
-      var tetoPartida = Math.min(cfg.DEGRAU_MAX, this.degrauInicialPartida + maxSubida);
+      var tetoPartida = Math.min(cfg.DEGRAU_MAX, this.degrauInicialPartida + (cfg.MAX_SUBIDA_POR_PARTIDA || 2));
 
       if (this.acertosSeguidosDegrau >= metaAcertos) {
         this.acertosSeguidosDegrau = 0;
@@ -469,12 +479,8 @@ window.Motor = {
           this.indiceCicloSubida++;
         }
 
-        // Salto de Fluência: se o aluno está em chama alta (>= 9 seguidas) e ainda nos degraus iniciais, avança +2
-        var salto = (this.acertosSeguidosPartida >= 9 && this.degrauAtual <= 4) ? 2 : 1;
-        var novo = Math.min(tetoPartida, this.degrauAtual + salto);
-
-        if (novo > this.degrauAtual) {
-          this.degrauAtual = novo;
+        if (this.degrauAtual < tetoPartida) {
+          this.degrauAtual++;
           mudouDegrau = true;
           if (this.degrauAtual === cfg.DEGRAU_MAX) {
             this.atingiuTopo11NestaPartida = true;
@@ -486,7 +492,7 @@ window.Motor = {
       this.acertosSeguidosPartida = 0;
       this.errosSeguidosDegrau++;
 
-      if (this.errosSeguidosDegrau >= (cfg.ERROS_PARA_DESCER || 2)) {
+      if (this.errosSeguidosDegrau >= (cfg.ERROS_PARA_DESCER || 3)) {
         this.errosSeguidosDegrau = 0;
         var pisoMinimo = cfg.DEGRAU_MIN || 0;
         if (this.degrauAtual > pisoMinimo) {
@@ -502,7 +508,6 @@ window.Motor = {
     };
   },
 
-  // Exporta os dados da sessão para o Dados.js salvar em lote único no final da partida
   exportarResumoSessao: function () {
     return {
       degrauFinal: this.degrauAtual,

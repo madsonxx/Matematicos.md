@@ -1,8 +1,9 @@
 /**
  * ==========================================================================
  * 9. js/modos.js — Fluxo do Modo Desafio (30s) e Modo Treino (window.Modos)
- * Inclui Sistema de Recompensa "Chama Arcade / Fogo Neon" (Substitui confetes)
- * e Gravação Única ao sair/encerrar partida.
+ * - Alternância ao vivo dentro do Jogo/Treino entre "⌨️ Teclado" e "🎯 5 Opções".
+ * - Gerador de 5 Alternativas Inteligentes bem próximas da resposta correta.
+ * - Ranking não envia mais sozinho no fim (fica a cargo do botão na tela de Ranking).
  * ==========================================================================
  */
 (function () {
@@ -16,6 +17,7 @@
     var estadoPartida = {
         modoAtual: 'desafio',
         operacaoAtual: 'adicao',
+        tipoEntradaAtual: 'teclado', // 'teclado' ou 'opcoes' (5 alternativas)
         pontos: 0,
         acertos: 0,
         erros: 0,
@@ -24,7 +26,7 @@
         melhorSequencia: 0,
         maxMult: 1,
         contaAtual: null,
-        bloqueadoTreino: false,
+        bloqueadoOpcoes: false,
         timeoutTransicao: null
     };
 
@@ -36,10 +38,6 @@
         mestre: { icone: '👑', nome: 'Modo Mestre' }
     };
 
-    /**
-     * Dispara labaredas e fagulhas ascendentes de Fogo Neon (Estilo Arcade/Streak)
-     * Escala a cor e intensidade conforme o multiplicador atual (2x Verde, 3x Azul Plasma, 4x Fogo Dourado/Rubi)
-     */
     function dispararChamaNeon(multiplicador) {
         try {
             var container = document.body;
@@ -53,7 +51,6 @@
             };
             var cores = paletas[nivel] || paletas[4];
 
-            // Pulso de ignição no placar central
             var elPlacar = document.getElementById('container-placar-central');
             if (elPlacar) {
                 elPlacar.classList.remove('ignicao-combo');
@@ -129,27 +126,29 @@
         };
     }
 
-    function gerarAlternativasInteligentes(respostaCorreta) {
+    // Gera alternativas inteligentes (3 para Treino, 5 para Desafio)
+    function gerarAlternativasInteligentes(respostaCorreta, quantidade) {
         var certa = Number(respostaCorreta);
         var opcoes = [certa];
-        var deltasPossiveis = [-5, -4, -3, -2, 2, 3, 4, 5];
+        var qtdDesejada = quantidade || 3;
 
-        for (var i = deltasPossiveis.length - 1; i > 0; i--) {
+        var deltas = [-3, -2, -1, 1, 2, 3, -4, 4, -5, 5, 10, -10];
+        for (var i = deltas.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
-            var temp = deltasPossiveis[i];
-            deltasPossiveis[i] = deltasPossiveis[j];
-            deltasPossiveis[j] = temp;
+            var temp = deltas[i];
+            deltas[i] = deltas[j];
+            deltas[j] = temp;
         }
 
-        for (var k = 0; k < deltasPossiveis.length && opcoes.length < 3; k++) {
-            var candidato = certa + deltasPossiveis[k];
-            if (candidato >= 0 && opcoes.indexOf(candidato) === -1 && (candidato % 10 !== certa % 10)) {
-                opcoes.push(candidato);
+        for (var k = 0; k < deltas.length && opcoes.length < qtdDesejada; k++) {
+            var cand = certa + deltas[k];
+            if (cand >= 0 && opcoes.indexOf(cand) === -1) {
+                opcoes.push(cand);
             }
         }
 
-        var inc = 2;
-        while (opcoes.length < 3) {
+        var inc = 1;
+        while (opcoes.length < qtdDesejada) {
             var extra = certa + inc;
             if (extra >= 0 && opcoes.indexOf(extra) === -1) {
                 opcoes.push(extra);
@@ -157,6 +156,7 @@
             inc++;
         }
 
+        // Embaralha
         for (var m = opcoes.length - 1; m > 0; m--) {
             var n = Math.floor(Math.random() * (m + 1));
             var aux = opcoes[m];
@@ -166,6 +166,8 @@
 
         return opcoes;
     }
+
+
 
     function gerarExplicacaoDidatica(conta) {
         var a = conta.numA;
@@ -218,7 +220,50 @@
     var Modos = {
         modoAtual: 'desafio',
         operacaoAtual: 'adicao',
+        preferenciaEntradaDesafio: 'teclado', // Guarda a escolha do aluno durante a sessão
+        preferenciaEntradaTreino: 'opcoes',
         partidaAtiva: false,
+
+        // Permite alternar entre Teclado e 5 Opções A QUALQUER MOMENTO dentro do jogo!
+        alternarMetodoEntradaNoJogo: function () {
+            if (!partidaAtiva) return;
+
+            var novoTipo = (estadoPartida.tipoEntradaAtual === 'teclado') ? 'opcoes' : 'teclado';
+            estadoPartida.tipoEntradaAtual = novoTipo;
+
+            if (this.modoAtual === 'desafio') {
+                this.preferenciaEntradaDesafio = novoTipo;
+            } else {
+                this.preferenciaEntradaTreino = novoTipo;
+            }
+
+            this._sincronizarInterfaceEntrada();
+
+            // Prepara imediatamente a questão atual para o novo método escolhido
+            if (estadoPartida.contaAtual) {
+                if (novoTipo === 'opcoes') {
+                    this._renderizarBotoesOpcoes(estadoPartida.contaAtual);
+                } else if (window.Teclado && typeof window.Teclado.prepararParaNovaConta === 'function') {
+                    window.Teclado.prepararParaNovaConta(estadoPartida.contaAtual.resposta);
+                }
+            }
+        },
+
+        _sincronizarInterfaceEntrada: function () {
+            var usarOpcoes = (estadoPartida.tipoEntradaAtual === 'opcoes');
+            var elTeclado = document.getElementById('container-teclado');
+            var elTreino = document.getElementById('container-treino');
+            var btnTroca = document.getElementById('btn-alternar-entrada-jogo');
+
+            if (elTeclado) elTeclado.classList.toggle('oculto', usarOpcoes);
+            if (elTreino) elTreino.classList.toggle('oculto', !usarOpcoes);
+
+            if (btnTroca) {
+                // Mostra no botão o ícone da outra modalidade para qual ele pode chavear
+                btnTroca.innerHTML = usarOpcoes ? '⌨️ Usar Teclado' : '🎯 5 Opções';
+                btnTroca.classList.toggle('modo-opcoes-ativo', usarOpcoes);
+            }
+        },
 
         iniciarPartida: function (modo, operacao) {
             try {
@@ -229,9 +274,14 @@
                 this.operacaoAtual = operacao || 'adicao';
                 this.partidaAtiva = partidaAtiva = true;
 
+                var entradaInicial = (this.modoAtual === 'treino')
+                    ? this.preferenciaEntradaTreino
+                    : this.preferenciaEntradaDesafio;
+
                 estadoPartida = {
                     modoAtual: this.modoAtual,
                     operacaoAtual: this.operacaoAtual,
+                    tipoEntradaAtual: entradaInicial,
                     pontos: 0,
                     acertos: 0,
                     erros: 0,
@@ -240,7 +290,7 @@
                     melhorSequencia: 0,
                     maxMult: 1,
                     contaAtual: null,
-                    bloqueadoTreino: false,
+                    bloqueadoOpcoes: false,
                     timeoutTransicao: null
                 };
 
@@ -257,7 +307,7 @@
 
                 if (window.Teclado && typeof window.Teclado.inicializar === 'function') {
                     window.Teclado.inicializar(function (valorDigitado) {
-                        self.verificarRespostaDesafio(valorDigitado);
+                        self.verificarRespostaTeclado(valorDigitado);
                     });
                 }
 
@@ -272,16 +322,12 @@
 
                 var elTimer = document.getElementById('container-timer');
                 var elPlacar = document.getElementById('container-placar-central');
-                var elTeclado = document.getElementById('container-teclado');
-                var elTreino = document.getElementById('container-treino');
 
                 if (elTimer) elTimer.classList.toggle('oculto', this.modoAtual === 'treino');
                 if (elPlacar) elPlacar.classList.toggle('oculto', this.modoAtual === 'treino');
-                if (elTeclado) elTeclado.classList.toggle('oculto', this.modoAtual === 'treino');
-                if (elTreino) elTreino.classList.toggle('oculto', this.modoAtual !== 'treino');
 
+                this._sincronizarInterfaceEntrada();
                 this._sincronizarBotaoAjuda(false);
-
                 this._atualizarPlacarUI();
                 this.proximaQuestao();
 
@@ -294,7 +340,6 @@
         },
 
         pararPartida: function () {
-            // Se o aluno respondeu contas no Treino (ou saiu antes dos 30s no Desafio), salva o progresso em lote único
             if (this.partidaAtiva && (estadoPartida.acertos > 0 || estadoPartida.erros > 0 || estadoPartida.treinoAcertos > 0)) {
                 if (window.Dados && typeof window.Dados.registrarFimDePartida === 'function') {
                     window.Dados.registrarFimDePartida({
@@ -332,7 +377,7 @@
             if (chkAjuda) chkAjuda.checked = Boolean(ativo);
             if (labelAjuda) labelAjuda.classList.toggle('ajuda-ativa', Boolean(ativo));
             if (textoBtn) {
-                textoBtn.textContent = ativo ? 'Ajuda Passo a Passo Ativa' : 'Ver Ajuda Visual';
+                textoBtn.textContent = ativo ? 'Ajuda Ativa' : 'Ajuda Visual';
             }
             if (!ativo) {
                 if (window.Visual && typeof window.Visual.limpar === 'function') {
@@ -426,7 +471,7 @@
             }
 
             estadoPartida.contaAtual = normalizarConta(contaBruta, this.operacaoAtual);
-            estadoPartida.bloqueadoTreino = false;
+            estadoPartida.bloqueadoOpcoes = false;
 
             var elConta = document.getElementById('texto-conta');
             var elDisplay = document.getElementById('display-resposta');
@@ -442,8 +487,8 @@
                 elConta.textContent = estadoPartida.contaAtual.texto;
             }
 
-            if (this.modoAtual === 'treino') {
-                this._renderizarBotoesTreino(estadoPartida.contaAtual);
+            if (estadoPartida.tipoEntradaAtual === 'opcoes') {
+                this._renderizarBotoesOpcoes(estadoPartida.contaAtual);
             } else {
                 if (window.Teclado && typeof window.Teclado.prepararParaNovaConta === 'function') {
                     window.Teclado.prepararParaNovaConta(estadoPartida.contaAtual.resposta);
@@ -456,7 +501,7 @@
             }
         },
 
-        _renderizarBotoesTreino: function (conta) {
+        _renderizarBotoesOpcoes: function (conta) {
             var self = this;
             var containerTreino = document.getElementById('container-treino');
             if (!containerTreino) return;
@@ -472,16 +517,103 @@
                 btn.setAttribute('data-valor', String(valorOpcao));
 
                 btn.addEventListener('click', function () {
-                    self._verificarEscolhaTreino(btn, valorOpcao, conta, containerTreino);
+                    if (self.modoAtual === 'desafio') {
+                        self._verificarEscolhaOpcaoDesafio(btn, valorOpcao, conta, containerTreino);
+                    } else {
+                        self._verificarEscolhaTreino(btn, valorOpcao, conta, containerTreino);
+                    }
                 });
 
                 containerTreino.appendChild(btn);
             });
         },
 
+        _verificarEscolhaOpcaoDesafio: function (botaoClicado, valorEscolhido, conta, container) {
+            if (!partidaAtiva || estadoPartida.bloqueadoOpcoes) return;
+            estadoPartida.bloqueadoOpcoes = true;
+
+            var self = this;
+            var acertou = (Number(valorEscolhido) === Number(conta.resposta));
+            var elDisplay = document.getElementById('display-resposta');
+            var botoes = container.querySelectorAll('.btn-alternativa');
+
+            for (var i = 0; i < botoes.length; i++) {
+                botoes[i].disabled = true;
+            }
+
+            if (elDisplay) {
+                elDisplay.textContent = conta.resposta;
+            }
+
+            if (window.Motor && typeof window.Motor.registrarResposta === 'function') {
+                window.Motor.registrarResposta(acertou);
+            }
+
+            if (acertou) {
+                botaoClicado.classList.add('alternativa-correta');
+                if (elDisplay) elDisplay.classList.add('display-correto');
+
+                estadoPartida.acertos++;
+                estadoPartida.sequenciaAtual++;
+                if (estadoPartida.sequenciaAtual > estadoPartida.melhorSequencia) {
+                    estadoPartida.melhorSequencia = estadoPartida.sequenciaAtual;
+                }
+
+                var faixaCombo = this._obterFaixaCombo(estadoPartida.sequenciaAtual);
+                if (faixaCombo.multiplicador > estadoPartida.maxMult) {
+                    estadoPartida.maxMult = faixaCombo.multiplicador;
+                }
+
+                estadoPartida.pontos += (100 * faixaCombo.multiplicador);
+                this._atualizarPlacarUI();
+
+                var marcosFogo = (window.CONFIG && window.CONFIG.COMBO && window.CONFIG.COMBO.MARCOS_FOGO) || [3, 7, 10, 14, 18, 22, 26, 30];
+                if (marcosFogo.indexOf(estadoPartida.sequenciaAtual) !== -1) {
+                    if (window.Som && typeof window.Som.tocarArpejo === 'function') window.Som.tocarArpejo();
+                    dispararChamaNeon(faixaCombo.multiplicador);
+                } else if (window.Som && typeof window.Som.tocarAcerto === 'function') {
+                    window.Som.tocarAcerto();
+                }
+
+                if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
+                    if (estadoPartida.sequenciaAtual >= 3) {
+                        window.Mascotes.atualizarFala('combo', { multiplicador: faixaCombo.multiplicador });
+                    } else {
+                        window.Mascotes.atualizarFala('acerto');
+                    }
+                }
+
+                estadoPartida.timeoutTransicao = setTimeout(function () {
+                    if (partidaAtiva) self.proximaQuestao();
+                }, 140);
+            } else {
+                botaoClicado.classList.add('alternativa-errada');
+                if (elDisplay) elDisplay.classList.add('display-erro');
+
+                for (var j = 0; j < botoes.length; j++) {
+                    if (Number(botoes[j].getAttribute('data-valor')) === Number(conta.resposta)) {
+                        botoes[j].classList.add('alternativa-correta');
+                    }
+                }
+
+                estadoPartida.erros++;
+                estadoPartida.sequenciaAtual = 0;
+                this._atualizarPlacarUI();
+
+                if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
+                if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
+                    window.Mascotes.atualizarFala('erro');
+                }
+
+                estadoPartida.timeoutTransicao = setTimeout(function () {
+                    if (partidaAtiva) self.proximaQuestao();
+                }, 350);
+            }
+        },
+
         _verificarEscolhaTreino: function (botaoClicado, valorEscolhido, conta, container) {
-            if (!partidaAtiva || estadoPartida.bloqueadoTreino) return;
-            estadoPartida.bloqueadoTreino = true;
+            if (!partidaAtiva || estadoPartida.bloqueadoOpcoes) return;
+            estadoPartida.bloqueadoOpcoes = true;
 
             var self = this;
             var acertou = (Number(valorEscolhido) === Number(conta.resposta));
@@ -537,6 +669,57 @@
 
                 var explicacao = gerarExplicacaoDidatica(conta);
                 definirFalaMascoteDireta(explicacao);
+
+                estadoPartida.timeoutTransicao = setTimeout(function () {
+                    if (partidaAtiva) self.proximaQuestao();
+                }, 1500);
+            }
+        },
+
+        // Trata a digitação no teclado virtual/físico tanto no Desafio quanto no Treino
+        verificarRespostaTeclado: function (entradaTexto) {
+            if (!partidaAtiva || !estadoPartida.contaAtual) return;
+
+            if (this.modoAtual === 'treino') {
+                this._verificarTecladoNoTreino(entradaTexto);
+            } else {
+                this.verificarRespostaDesafio(entradaTexto);
+            }
+        },
+
+        _verificarTecladoNoTreino: function (entradaTexto) {
+            if (estadoPartida.bloqueadoOpcoes) return;
+            estadoPartida.bloqueadoOpcoes = true;
+
+            var self = this;
+            var conta = estadoPartida.contaAtual;
+            var acertou = (Number(entradaTexto) === Number(conta.resposta));
+            var elDisplay = document.getElementById('display-resposta');
+
+            if (window.Motor && typeof window.Motor.registrarResposta === 'function') {
+                window.Motor.registrarResposta(acertou);
+            }
+
+            if (acertou) {
+                estadoPartida.treinoAcertos++;
+                estadoPartida.sequenciaAtual++;
+                if (elDisplay) elDisplay.classList.add('display-correto');
+                if (estadoPartida.sequenciaAtual % 5 === 0) dispararChamaNeon(3);
+                if (window.Som && typeof window.Som.tocarAcerto === 'function') window.Som.tocarAcerto();
+                definirFalaMascoteDireta('🔥 Mandou bem! ' + conta.texto + ' <strong>' + conta.resposta + '</strong>!');
+
+                estadoPartida.timeoutTransicao = setTimeout(function () {
+                    if (partidaAtiva) self.proximaQuestao();
+                }, 800);
+            } else {
+                estadoPartida.erros++;
+                estadoPartida.sequenciaAtual = 0;
+                if (elDisplay) {
+                    elDisplay.textContent = conta.resposta;
+                    elDisplay.classList.add('display-erro');
+                }
+                if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
+                definirFalaMascoteDireta(gerarExplicacaoDidatica(conta));
 
                 estadoPartida.timeoutTransicao = setTimeout(function () {
                     if (partidaAtiva) self.proximaQuestao();
@@ -630,7 +813,6 @@
         },
 
         encerrarPartida: function () {
-            // Desativa flag antes de chamar pararPartida para evitar gravação duplicada
             this.partidaAtiva = partidaAtiva = false;
             if (timerId) {
                 clearInterval(timerId);
@@ -646,6 +828,7 @@
                 dispararChamaNeon(4);
             }
 
+            // Salva apenas localmente no aparelho (o aluno submete manualmente na tela de Ranking)
             var registro = { recordeAtual: estadoPartida.pontos, bateuRecorde: false };
             if (window.Dados && typeof window.Dados.registrarFimDePartida === 'function') {
                 registro = window.Dados.registrarFimDePartida({

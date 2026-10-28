@@ -37,7 +37,6 @@
         <!-- 2. TELA DO MENU PRINCIPAL -->
         <section id="tela-menu" class="tela oculto">
             <div class="painel">
-                <!-- Barra superior com aluno atual e troca rápida -->
                 <div class="barra-aluno">
                     <div class="info-aluno">
                         <span>👤</span>
@@ -51,7 +50,6 @@
                     <p class="subtitulo">Escolha como quer praticar hoje</p>
                 </div>
 
-                <!-- Botões principais de Modo -->
                 <div class="grade-botoes">
                     <button type="button" id="btn-modo-desafio" class="btn btn-destaque-azul">
                         ⚡ Modo Desafio (30s)
@@ -63,7 +61,6 @@
 
                 <hr class="divisor">
 
-                <!-- Botões secundários: Conquistas, Ranking e Som -->
                 <div class="grade-botoes-secundarios">
                     <button type="button" id="btn-abrir-conquistas" class="btn btn-secundario">
                         🏆 Minhas Conquistas
@@ -78,7 +75,7 @@
             </div>
         </section>
 
-        <!-- 3. TELA DE ESCOLHA DA OPERAÇÃO -->
+        <!-- 3. TELA DE ESCOLHA DA OPERAÇÃO (Limpa, sem seletor extra) -->
         <section id="tela-operacao" class="tela oculto">
             <div class="painel">
                 <div class="cabecalho-tela">
@@ -108,7 +105,7 @@
             </div>
         </section>
 
-        <!-- 4. TELA DE JOGO -->
+        <!-- 4. TELA DE JOGO (Com botão de alternar Teclado ⇄ 5 Opções ao vivo) -->
         <section id="tela-jogo" class="tela oculto">
             <div class="painel painel-jogo">
 
@@ -142,12 +139,17 @@
                 </div>
 
                 <div class="jogo-bloco-base area-interacao">
-                    <div class="barra-ajuda-base">
+                    <!-- Barra dupla: 💡 Ajuda Visual + Botão de trocar Teclado ⇄ 5 Opções dentro do jogo -->
+                    <div class="barra-ajuda-base barra-controles-jogo">
                         <label class="toggle-ajuda-destaque" for="chk-ajuda">
                             <input type="checkbox" id="chk-ajuda">
                             <span class="icone-lampada">💡</span>
-                            <span id="texto-btn-ajuda">Ver Ajuda Visual</span>
+                            <span id="texto-btn-ajuda">Ajuda Visual</span>
                         </label>
+                        <button type="button" id="btn-alternar-entrada-jogo" class="btn-troca-entrada"
+                            title="Alternar entre Teclado e 5 Opções">
+                            🎯 5 Opções
+                        </button>
                     </div>
 
                     <div id="container-teclado" class="grade-teclado">
@@ -202,6 +204,9 @@
                     <button type="button" id="btn-jogar-novamente" class="btn btn-primario">
                         🔄 Jogar de Novo
                     </button>
+                    <button type="button" id="btn-fim-ir-ranking" class="btn btn-destaque-azul">
+                        🥇 Ver Ranking / Submeter Recorde
+                    </button>
                     <button type="button" id="btn-fim-menu" class="btn btn-secundario">
                         🏠 Voltar ao Menu
                     </button>
@@ -220,38 +225,55 @@
             </div>
         </section>
 
-        <!-- 7. TELA DE RANKING DA TURMA -->
+        <!-- 7. TELA DE RANKING DA TURMA (Top 10 Planilha + Meus Recordes Locais c/ Submissão) -->
         <section id="tela-ranking" class="tela oculto">
-            <div class="painel">
+            <div class="painel painel-ranking-duplo">
                 <div class="cabecalho-tela">
                     <button type="button" id="btn-fechar-ranking" class="btn-pequeno">← Voltar</button>
-                    <span class="badge-modo">🥇 Top 10 da Turma</span>
+                    <span class="badge-modo">🥇 Ranking & Recordes</span>
                 </div>
-                <h2 class="titulo-secao">Ranking da Turma</h2>
 
-                <div id="container-ranking-conteudo" class="ranking-conteudo"
-                    style="margin-top: 1rem; width: 100%; overflow-y: auto; max-height: 65vh;">
-                    <div id="ranking-loading" class="ranking-status"
-                        style="text-align: center; padding: 2rem; color: var(--neon-azul);">Carregando ranking... ⏳
+                <div class="ranking-scroll-area">
+                    <!-- BLOCO 1: TOP 10 DA PLANILHA OFICIAL -->
+                    <div class="ranking-bloco-card">
+                        <div class="ranking-bloco-header">
+                            <h3 class="ranking-subtitulo">🌐 Top 10 Oficial da Turma</h3>
+                            <button type="button" id="btn-atualizar-ranking" class="btn-mini-acao"
+                                title="Atualizar">🔄</button>
+                        </div>
+
+                        <div id="ranking-loading" class="ranking-status">
+                            Carregando planilha... ⏳
+                        </div>
+                        <div id="ranking-erro" class="ranking-status ranking-aviso oculto"></div>
+
+                        <table id="tabela-ranking" class="tabela-ranking oculto">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Aluno</th>
+                                    <th style="text-align: right;">Pontos</th>
+                                    <th style="text-align: center;">Op</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpo-tabela-ranking"></tbody>
+                        </table>
                     </div>
-                    <div id="ranking-erro" class="ranking-status oculto"
-                        style="text-align: center; padding: 2rem; color: var(--cor-erro);">Erro ao carregar o ranking.
-                        Verifique sua conexão ou a URL do Apps Script.</div>
 
-                    <table id="tabela-ranking" class="tabela-ranking oculto"
-                        style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
-                        <thead>
-                            <tr style="border-bottom: 2px solid rgba(255,255,255,0.15); color: var(--neon-azul);">
-                                <th style="padding: 10px;">Pos</th>
-                                <th style="padding: 10px;">Aluno</th>
-                                <th style="padding: 10px; text-align: right;">Pontos</th>
-                                <th style="padding: 10px; text-align: center;">Op</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpo-tabela-ranking">
+                    <!-- BLOCO 2: RECORDES LOCAIS DO ALUNO + BOTÃO DE SUBMETER -->
+                    <div class="ranking-bloco-card ranking-bloco-local">
+                        <div class="ranking-bloco-header">
+                            <h3 class="ranking-subtitulo">📱 Meus Recordes (<span
+                                    id="ranking-nome-aluno-local">Aluno</span>)</h3>
+                        </div>
+                        <p class="ranking-dica-envio">
+                            Envie seus melhores resultados para a planilha do professor (use seu nome verdadeiro!):
+                        </p>
+                        <div id="lista-recordes-locais" class="lista-recordes-locais">
                             <!-- Preenchido dinamicamente por js/ranking.js -->
-                        </tbody>
-                    </table>
+                        </div>
+                        <div id="feedback-envio-ranking" class="feedback-envio-ranking oculto"></div>
+                    </div>
                 </div>
             </div>
         </section>

@@ -505,18 +505,20 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
+    margin: 2px 0;
 }
 
 .mascote-container {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 10px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    padding: 6px 14px;
-    border-radius: 18px;
-    max-width: 100%;
-    transition: all 0.22s ease;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(30, 41, 59, 0.88) 100%);
+    border: 1.5px solid var(--neon-azul);
+    padding: 6px 12px;
+    border-radius: 16px;
+    max-width: 95%;
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.18);
+    transition: all 0.2s ease;
 }
 
 .mascote-container.mascote-modo-duolingo {
@@ -527,16 +529,16 @@ body {
 }
 
 .mascote-avatar {
-    font-size: 1.55rem;
+    font-size: 1.4rem;
     line-height: 1;
     flex-shrink: 0;
 }
 
 .mascote-balao {
     color: var(--cor-texto);
-    font-size: 0.86rem;
+    font-size: 0.82rem;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.25;
     text-align: left;
 }
 
@@ -994,11 +996,221 @@ body {
    ========================================== */
 
 /* Grade de 3 Alternativas no Modo Treino */
+/* ==========================================
+   BARRA DUPLA NO JOGO (💡 Ajuda + Troca ⌨️/🎯)
+   ========================================== */
+.barra-controles-jogo {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.barra-controles-jogo .toggle-ajuda-destaque {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 0.88rem;
+}
+
+.btn-troca-entrada {
+    min-height: 44px;
+    padding: 6px 14px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(56, 189, 248, 0.5);
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--neon-azul);
+    font-size: 0.88rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s ease;
+}
+
+.btn-troca-entrada:active {
+    transform: scale(0.96);
+}
+
+.btn-troca-entrada.modo-opcoes-ativo {
+    border-color: var(--neon-roxo);
+    background: rgba(167, 139, 250, 0.18);
+    color: #F3E8FF;
+}
+
+/* ==========================================
+   GRADE DE 5 ALTERNATIVAS (3 em cima + 2 embaixo)
+   ========================================== */
 .grade-alternativas-treino {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    width: 100%;
+}
+
+.grade-alternativas-treino .btn-alternativa {
+    grid-column: span 2;
+    min-height: 52px;
+    font-size: 1.6rem;
+}
+
+/* Os 2 últimos botões ocupam 3 colunas cada, ficando centralizados na 2ª linha */
+.grade-alternativas-treino .btn-alternativa:nth-child(4) {
+    grid-column: 1 / span 3;
+}
+
+.grade-alternativas-treino .btn-alternativa:nth-child(5) {
+    grid-column: 4 / span 3;
+}
+
+/* ==========================================
+   TELA DE RANKING DUPLO (Planilha + Local)
+   ========================================== */
+.painel-ranking-duplo {
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.ranking-scroll-area {
+    display: flex;
+    flex-direction: column;
     gap: 12px;
     width: 100%;
+    overflow-y: auto;
+    max-height: 80vh;
+    padding-right: 2px;
+}
+
+.ranking-bloco-card {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid var(--borda-glass);
+    border-radius: 18px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ranking-bloco-local {
+    border-color: rgba(56, 189, 248, 0.35);
+}
+
+.ranking-bloco-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ranking-subtitulo {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: var(--neon-azul);
+}
+
+.btn-mini-acao {
+    background: var(--bg-glass);
+    border: 1px solid var(--borda-glass);
+    color: var(--cor-texto);
+    border-radius: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.ranking-status {
+    text-align: center;
+    padding: 12px;
+    font-size: 0.88rem;
+    color: var(--neon-azul);
+}
+
+.ranking-aviso {
+    color: var(--cor-texto-suave);
+}
+
+.tabela-ranking {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.tabela-ranking th {
+    padding: 6px;
+    border-bottom: 1px solid var(--borda-glass);
+    color: var(--cor-texto-suave);
+    text-align: left;
+}
+
+.ranking-dica-envio {
+    font-size: 0.78rem;
+    color: var(--cor-texto-suave);
+    line-height: 1.3;
+}
+
+.lista-recordes-locais {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.item-recorde-local {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px 10px;
+}
+
+.recorde-local-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.recorde-local-op {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--cor-texto);
+}
+
+.recorde-local-pts {
+    font-size: 0.95rem;
+    color: var(--mult-4x);
+}
+
+.btn-submeter-recorde {
+    background: linear-gradient(135deg, #38BDF8 0%, #2563EB 100%);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+}
+
+.btn-submeter-recorde:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.btn-submeter-enviado {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid var(--cor-acerto);
+    color: #4ADE80;
+    cursor: default;
+}
+
+.btn-submeter-desativado {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--cor-texto-suave);
+    cursor: default;
+}
+
+.feedback-envio-ranking {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-align: center;
+    padding-top: 4px;
 }
 
 .btn-alternativa {
