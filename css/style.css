@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MATEMÁGICOS — Folha de Estilo Principal (Marco 4: Responsivo Fino)
+   MATEMÁGICOS — Folha de Estilo Principal (Marco 6: Arminha & Guia Duolingo)
    Paleta "Meia-Noite Indigo" | Glassmorphism | Mobile-First (min 56px)
    ========================================================================== */
 
@@ -346,14 +346,14 @@ body {
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
-    padding: 16px 16px 18px;
+    padding: 14px 16px 16px;
 }
 
 /* 1. Topo estilo Quiz App */
 .jogo-bloco-topo {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
     flex-shrink: 0;
 }
@@ -417,15 +417,15 @@ body {
     transition: width 0.1s linear, background-color 0.25s ease;
 }
 
-/* 2. Centro da Tela: Placar + Multiplicador, Mascote e Conta Gigante */
+/* 2. Centro da Tela: Placar + Multiplicador, Mascote e Conta */
 .jogo-bloco-centro {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     flex: 1;
-    padding: 4px 0;
+    padding: 2px 0;
     min-height: 0;
 }
 
@@ -438,7 +438,7 @@ body {
 }
 
 .pontos-destaque {
-    font-size: 1.85rem;
+    font-size: 1.65rem;
     font-weight: 900;
     letter-spacing: -0.5px;
     transition: color 0.2s, text-shadow 0.2s;
@@ -446,9 +446,9 @@ body {
 
 .badge-mult {
     background-color: var(--bg-glass);
-    padding: 4px 12px;
+    padding: 3px 11px;
     border-radius: 999px;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 900;
     border: 2px solid var(--cor-texto);
     transition: all 0.2s ease;
@@ -500,7 +500,7 @@ body {
     transform: scale(1.06);
 }
 
-/* Mascote leve e centralizado */
+/* Mascote e Balão Flutuante (Estilo Duolingo no M6) */
 .area-mascote {
     width: 100%;
     display: flex;
@@ -511,23 +511,38 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    background-color: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 6px 14px;
-    border-radius: 999px;
+    border-radius: 18px;
     max-width: 100%;
+    transition: all 0.22s ease;
+}
+
+.mascote-container.mascote-modo-duolingo {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(30, 41, 59, 0.92) 100%);
+    border: 1.5px solid var(--neon-azul);
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.22);
+    padding: 8px 14px;
 }
 
 .mascote-avatar {
-    font-size: 1.5rem;
+    font-size: 1.55rem;
     line-height: 1;
+    flex-shrink: 0;
 }
 
 .mascote-balao {
-    color: var(--cor-texto-suave);
-    font-size: 0.88rem;
+    color: var(--cor-texto);
+    font-size: 0.86rem;
     font-weight: 600;
-    line-height: 1.25;
+    line-height: 1.3;
+    text-align: left;
+}
+
+.mascote-balao strong {
+    color: var(--mult-4x);
+    font-weight: 800;
 }
 
 @keyframes pulsoBalao {
@@ -536,7 +551,7 @@ body {
     }
 
     50% {
-        transform: scale(1.04);
+        transform: scale(1.03);
     }
 
     100% {
@@ -546,21 +561,27 @@ body {
 
 .balao-animar {
     animation: pulsoBalao 0.25s ease;
-    color: var(--cor-texto);
 }
 
-/* Operação Matemática Gigante e Centralizada */
+/* ==========================================
+   OPERAÇÃO MATEMÁTICA E "ARMINHA" VERTICAL (M6)
+   ========================================== */
 .area-conta {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 16px;
-    padding: 6px;
+    padding: 2px 6px;
     width: 100%;
 }
 
+.area-conta.area-conta-vertical {
+    flex-direction: column;
+    gap: 4px;
+}
+
 .conta-matematica {
-    font-size: 3.6rem;
+    font-size: 3.5rem;
     font-weight: 800;
     letter-spacing: -1px;
     color: #FFFFFF;
@@ -568,9 +589,176 @@ body {
     line-height: 1;
 }
 
+.conta-matematica.conta-modo-arminha {
+    font-size: 1rem;
+    letter-spacing: 0;
+    line-height: 1.1;
+}
+
+/* Cartão da Arminha Vertical */
+.arminha-card {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 22px;
+    padding: 8px 20px 10px;
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.arminha-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 38px 56px 56px;
+    align-items: center;
+    justify-items: center;
+    row-gap: 2px;
+}
+
+/* Destaques Neon de Coluna (Coluna D e Coluna U) */
+.arminha-col-bg {
+    position: absolute;
+    top: 2px;
+    bottom: 62px;
+    width: 52px;
+    border-radius: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.25s ease;
+    z-index: 0;
+}
+
+.arminha-col-bg.col-bg-dez {
+    grid-column: 2;
+}
+
+.arminha-col-bg.col-bg-uni {
+    grid-column: 3;
+}
+
+.arminha-col-bg.arminha-col-ativa-neon {
+    opacity: 1;
+    background: rgba(56, 189, 248, 0.14);
+    border: 2px solid var(--neon-azul);
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+    animation: pulsarColunaNeon 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes pulsarColunaNeon {
+    from {
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+
+    to {
+        box-shadow: 0 0 22px rgba(56, 189, 248, 0.75);
+    }
+}
+
+.arminha-cel {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arminha-rotulo-col {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--cor-texto-suave);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    height: 16px;
+}
+
+.arminha-carry-cel {
+    min-height: 24px;
+}
+
+/* Badges de "Vai 1" e "Pede Emprestado" */
+.badge-arminha-carry {
+    background: rgba(251, 191, 36, 0.22);
+    border: 1.5px solid var(--mult-4x);
+    color: var(--mult-4x);
+    font-size: 0.88rem;
+    font-weight: 900;
+    padding: 1px 8px;
+    border-radius: 999px;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
+    animation: surgir 0.2s ease-out;
+}
+
+.badge-arminha-emprestimo-dez {
+    background: rgba(167, 139, 250, 0.22);
+    border: 1.5px solid var(--neon-roxo);
+    color: #F3E8FF;
+    font-size: 0.85rem;
+    font-weight: 900;
+    padding: 1px 7px;
+    border-radius: 999px;
+}
+
+.badge-arminha-emprestimo-uni {
+    background: rgba(34, 197, 94, 0.22);
+    border: 1.5px solid var(--cor-acerto);
+    color: #86EFAC;
+    font-size: 0.85rem;
+    font-weight: 900;
+    padding: 1px 7px;
+    border-radius: 999px;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.arminha-digito {
+    font-size: 2.85rem;
+    font-weight: 900;
+    color: #FFFFFF;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    transition: all 0.2s ease;
+}
+
+.arminha-digito.digito-riscado {
+    color: #EF4444;
+    opacity: 0.65;
+    text-decoration: line-through;
+    text-decoration-thickness: 3px;
+}
+
+.arminha-digito.digito-destaque-emprestimo {
+    color: var(--mult-4x);
+}
+
+.arminha-operador {
+    font-size: 2.3rem;
+    font-weight: 900;
+    color: var(--neon-azul);
+    line-height: 1;
+}
+
+.arminha-traco {
+    grid-column: 1 / span 3;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, rgba(56, 189, 248, 0.4), #FFFFFF, rgba(56, 189, 248, 0.4));
+    border-radius: 999px;
+    margin: 4px 0 6px;
+    z-index: 1;
+}
+
+.arminha-slot-resposta {
+    grid-column: 1 / span 3;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    z-index: 1;
+}
+
 .display-valor {
     min-width: 105px;
-    min-height: 76px;
+    min-height: 70px;
     background-color: var(--bg-glass);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -579,12 +767,22 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3.4rem;
+    font-size: 3.1rem;
     font-weight: 800;
     color: var(--neon-azul);
     padding: 0 16px;
     box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
     transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.display-valor.display-arminha-resultado {
+    width: 118px;
+    min-height: 54px;
+    font-size: 2.55rem;
+    border-radius: 14px;
+    padding: 0 10px;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Estado Correto no Display */
@@ -631,19 +829,107 @@ body {
     animation: tremidinha 0.3s ease-in-out;
 }
 
+/* Área de Ajuda Visual & Barra de Passos Estilo Duolingo (M6) */
 .area-ajuda-visual {
     width: 100%;
-    background-color: rgba(15, 23, 42, 0.65);
-    border: 1px solid rgba(251, 191, 36, 0.35);
+    background-color: rgba(15, 23, 42, 0.78);
+    border: 1px solid rgba(56, 189, 248, 0.4);
     border-radius: 16px;
-    padding: 10px;
-    max-height: 120px;
+    padding: 8px 10px;
+    max-height: 118px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     animation: surgir 0.18s ease-out;
+}
+
+.guia-duolingo-box {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.guia-duolingo-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.guia-duolingo-badge {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: var(--neon-azul);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.guia-duolingo-dots {
+    display: flex;
+    gap: 5px;
+}
+
+.guia-step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.guia-step-dot.ativo {
+    width: 18px;
+    border-radius: 999px;
+    background: var(--neon-azul);
+    box-shadow: 0 0 8px var(--neon-azul);
+}
+
+.guia-duolingo-corpo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.guia-duolingo-resumo {
+    font-size: 0.84rem;
+    color: var(--cor-texto);
+}
+
+.guia-duolingo-resumo strong {
+    color: var(--mult-4x);
+}
+
+.guia-duolingo-acoes {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-guia-step {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--cor-texto);
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-guia-step:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.btn-guia-step.btn-guia-destaque {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--neon-azul);
+    color: #E0F2FE;
 }
 
 /* ==========================================
@@ -653,7 +939,7 @@ body {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
@@ -669,14 +955,14 @@ body {
     justify-content: center;
     gap: 8px;
     width: 100%;
-    min-height: 46px;
+    min-height: 44px;
     cursor: pointer;
     font-weight: 800;
-    font-size: 0.98rem;
+    font-size: 0.95rem;
     color: var(--mult-4x);
     background: rgba(251, 191, 36, 0.08);
     border: 1.5px solid rgba(251, 191, 36, 0.4);
-    padding: 8px 18px;
+    padding: 6px 18px;
     border-radius: 14px;
     transition: all 0.2s ease;
 }
@@ -716,16 +1002,16 @@ body {
 }
 
 .btn-alternativa {
-    min-height: 74px;
+    min-height: 68px;
     background: var(--bg-glass);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 2px solid rgba(167, 139, 250, 0.45);
     border-radius: 20px;
     color: var(--cor-texto);
-    font-size: 2.2rem;
+    font-size: 2.1rem;
     font-weight: 800;
-    padding: 14px 8px;
+    padding: 10px 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -759,11 +1045,11 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
 }
 
 .visual-dica-texto {
-    font-size: 0.88rem;
+    font-size: 0.85rem;
     color: var(--cor-texto);
     text-align: center;
 }
@@ -1030,48 +1316,141 @@ body {
     }
 }
 
+/* ==========================================
+   SISTEMA CHAMA ARCADE / FOGO NEON (Substitui Confetes)
+   ========================================== */
+.chama-particula {
+    position: fixed;
+    bottom: -24px;
+    border-radius: 50% 50% 35% 35%;
+    transform: rotate(45deg);
+    z-index: 9999;
+    pointer-events: none;
+    animation: subirChamaNeon ease-out forwards;
+}
+
+@keyframes subirChamaNeon {
+    0% {
+        transform: translateY(0) scale(0.7) rotate(45deg);
+        opacity: 0.95;
+    }
+
+    50% {
+        transform: translateY(-48vh) scale(1.15) rotate(25deg);
+        opacity: 0.85;
+    }
+
+    100% {
+        transform: translateY(-95vh) scale(0.2) rotate(65deg);
+        opacity: 0;
+    }
+}
+
+.ignicao-combo {
+    animation: pulsoIgnicao 0.38s ease-out;
+}
+
+@keyframes pulsoIgnicao {
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.14);
+        filter: brightness(1.35);
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+}
+
+/* Aura de Fogo Contínua no Combo Máximo (x4 ON FIRE) */
+.placar-central.mult-4x .badge-mult {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.28) 0%, rgba(239, 68, 68, 0.32) 100%);
+    animation: chamaPulsante4x 0.9s infinite alternate ease-in-out;
+}
+
+@keyframes chamaPulsante4x {
+    from {
+        box-shadow: 0 0 14px rgba(251, 191, 36, 0.65), 0 -4px 18px rgba(239, 68, 68, 0.45);
+        transform: scale(1.04);
+    }
+
+    to {
+        box-shadow: 0 0 26px rgba(251, 191, 36, 0.95), 0 -8px 28px rgba(249, 115, 22, 0.8);
+        transform: scale(1.1);
+    }
+}
+
 /* ==========================================================================
-   MARCO 4 — RESPONSIVO FINO: CELULARES PEQUENOS (ALTURA < 660PX)
+   MARCO 4 & M6 — RESPONSIVO FINO: TELEMÓVEIS PEQUENOS (ALTURA < 680PX)
    ========================================================================== */
-@media (max-height: 660px) and (orientation: portrait) {
+@media (max-height: 680px) and (orientation: portrait) {
 
     .painel,
     .painel-jogo {
-        padding: 12px 14px;
-        gap: 8px;
+        padding: 10px 12px;
+        gap: 6px;
     }
 
-    /* Reduz a fonte da conta matemática para 2.8rem em telas curtas */
+    .arminha-card {
+        padding: 5px 14px 6px;
+    }
+
+    .arminha-grid {
+        grid-template-columns: 32px 48px 48px;
+    }
+
+    .arminha-col-bg {
+        width: 44px;
+        bottom: 50px;
+    }
+
+    .arminha-digito {
+        font-size: 2.35rem;
+    }
+
+    .arminha-operador {
+        font-size: 1.9rem;
+    }
+
+    .display-valor.display-arminha-resultado {
+        width: 102px;
+        min-height: 46px;
+        font-size: 2.15rem;
+    }
+
     .conta-matematica {
         font-size: 2.8rem;
     }
 
     .display-valor {
         min-width: 82px;
-        min-height: 60px;
-        font-size: 2.6rem;
+        min-height: 56px;
+        font-size: 2.5rem;
         padding: 0 10px;
     }
 
     .tecla-num {
-        min-height: 56px;
-        /* Mantém toque confortável de 56px */
+        min-height: 52px;
         font-size: 1.45rem;
     }
 
     .btn-alternativa {
-        min-height: 62px;
-        font-size: 1.8rem;
+        min-height: 58px;
+        font-size: 1.75rem;
     }
 
     .area-ajuda-visual {
-        max-height: 85px;
-        padding: 6px;
+        max-height: 82px;
+        padding: 6px 8px;
     }
 }
 
 /* ==========================================================================
-   MARCO 4 — RESPONSIVO FINO: MODO PAISAGEM (HORIZONTAL) EM CELULARES
+   MARCO 4 & M6 — RESPONSIVO FINO: MODO PAISAGEM (HORIZONTAL) EM TELEMÓVEIS
    ========================================================================== */
 @media (orientation: landscape) and (max-height: 540px) {
     .app-container {
@@ -1096,13 +1475,22 @@ body {
         gap: 6px;
     }
 
+    .arminha-digito {
+        font-size: 2.1rem;
+    }
+
+    .display-valor.display-arminha-resultado {
+        min-height: 42px;
+        font-size: 1.9rem;
+    }
+
     .conta-matematica {
         font-size: 2.5rem;
     }
 
     .display-valor {
-        min-height: 54px;
-        font-size: 2.2rem;
+        min-height: 50px;
+        font-size: 2.1rem;
     }
 
     .jogo-bloco-base {
@@ -1110,18 +1498,18 @@ body {
     }
 
     .tecla-num {
-        min-height: 46px;
+        min-height: 44px;
         font-size: 1.3rem;
     }
 
     .btn-alternativa {
-        min-height: 56px;
+        min-height: 54px;
         font-size: 1.5rem;
     }
 }
 
 /* ==========================================================================
-   MARCO 4 — RESPONSIVO FINO: TELAS DE COMPUTADOR (PC)
+   MARCO 4 & M6 — RESPONSIVO FINO: ECRÃS DE COMPUTADOR (PC)
    ========================================================================== */
 @media (min-width: 768px) {
     body {
@@ -1130,7 +1518,7 @@ body {
 
     .app-container {
         max-width: 460px;
-        height: min(92dvh, 840px);
+        height: min(92dvh, 860px);
         border-radius: 28px;
         border: 1px solid rgba(255, 255, 255, 0.16);
         box-shadow:
@@ -1141,7 +1529,11 @@ body {
     .painel,
     .painel-jogo {
         height: 100%;
-        padding: 24px;
+        padding: 22px;
+    }
+
+    .arminha-digito {
+        font-size: 3.05rem;
     }
 
     .conta-matematica {
@@ -1149,12 +1541,12 @@ body {
     }
 
     .tecla-num {
-        min-height: 60px;
+        min-height: 58px;
         font-size: 1.75rem;
     }
 
     .btn-alternativa {
-        min-height: 82px;
+        min-height: 76px;
         font-size: 2rem;
     }
 }

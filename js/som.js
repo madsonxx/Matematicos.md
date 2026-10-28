@@ -2,7 +2,7 @@
  * js/som.js — Gerenciamento de Efeitos Sonoros via Web Audio API
  * Exposto globalmente em window.Som
  */
-(function() {
+(function () {
     'use strict';
 
     let audioCtx = null;
@@ -112,7 +112,7 @@
                 const agora = audioCtx.currentTime;
                 // Acorde de C maior (C5, E5, G5, C6)
                 const notas = [523.25, 659.25, 783.99, 1046.50];
-                
+
                 notas.forEach((freq, i) => {
                     const tempoNota = agora + (i * 0.07);
                     const osc = audioCtx.createOscillator();

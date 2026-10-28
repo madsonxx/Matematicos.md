@@ -1,6 +1,8 @@
 /* ==========================================================================
-   2. js/dados.js — Persistência Local por Aluno (window.Dados)
-   Gerencia Nome e Sobrenome, troca de aluno, degrau adaptativo e recordes.
+   2. js/dados.js — Persistência Local Ultra-Compacta por Aluno (window.Dados)
+   - Diagnóstico por Exclusão salvo em Micro-Arrays fixos de 8 inteiros:
+     [baixaAcerto, baixaErro, mediaAcerto, mediaErro, altaAcerto, altaErro, erroSemReserva, erroComReserva]
+   - Escrita única no final da partida (Zero sobrecarga no localStorage).
    ========================================================================== */
 
 window.Dados = {
@@ -12,6 +14,11 @@ window.Dados = {
     };
   },
 
+  // Cria o vetor fixo de 8 posições (ocupa ~25 bytes em JSON)
+  _criarVetorDiag: function () {
+    return [0, 0, 0, 0, 0, 0, 0, 0];
+  },
+
   _criarPerfilAluno: function (nomeExibicao) {
     return {
       nomeExibicao: nomeExibicao,
@@ -21,6 +28,13 @@ window.Dados = {
         multiplicacao: 0,
         divisao: 0,
         mestre: 0
+      },
+      // Micro-arrays de diagnóstico por operação (tamanho fixo, nunca cresce)
+      diag: {
+        adicao: this._criarVetorDiag(),
+        subtracao: this._criarVetorDiag(),
+        multiplicacao: this._criarVetorDiag(),
+        divisao: this._criarVetorDiag()
       },
       recordesPorOperacao: {
         adicao: 0,
@@ -104,6 +118,14 @@ window.Dados = {
 
     if (!banco.alunos[chave]) {
       banco.alunos[chave] = this._criarPerfilAluno(nomeFormatado);
+    } else if (!banco.alunos[chave].diag) {
+      // Migração transparente para alunos antigos já salvos no navegador
+      banco.alunos[chave].diag = {
+        adicao: this._criarVetorDiag(),
+        subtracao: this._criarVetorDiag(),
+        multiplicacao: this._criarVetorDiag(),
+        divisao: this._criarVetorDiag()
+      };
     }
 
     banco.alunoAtual = chave;
@@ -144,6 +166,33 @@ window.Dados = {
     return degrauSalvo;
   },
 
+  // Retorna cópia do micro-array de 8 posições da operação para uso em RAM pelo Motor
+  obterDiagnosticoOperacao: function (operacao) {
+    var aluno = this.obterAlunoAtual();
+    if (!aluno || !aluno.diag) return this._criarVetorDiag();
+    var op = (operacao === 'mestre') ? 'adicao' : (operacao || 'adicao');
+    var vetor = aluno.diag[op];
+    if (!Array.isArray(vetor) || vetor.length < 8) {
+      return this._criarVetorDiag();
+    }
+    return vetor.slice(0, 8);
+  },
+
+  // Soma o delta da partida no vetor do aluno aplicando teto de 99 (janela móvel leve)
+  _mesclarVetorDiag: function (vetorSalvo, deltaPartida) {
+    var base = (Array.isArray(vetorSalvo) && vetorSalvo.length === 8) ? vetorSalvo : this._criarVetorDiag();
+    for (var i = 0; i < 8; i++) {
+      base[i] = Math.min(99, (base[i] || 0) + (deltaPartida[i] || 0));
+      // Se acertos + erros daquela faixa passarem de 60, reduz ambos pela metade para manter proporção recente
+      if (i % 2 === 1 && (base[i - 1] + base[i]) > 60) {
+        base[i - 1] = Math.floor(base[i - 1] / 2);
+        base[i] = Math.floor(base[i] / 2);
+      }
+    }
+    return base;
+  },
+
+  // Mantido para compatibilidade caso chamado isoladamente
   salvarDegrauOperacao: function (operacao, novoDegrau, atingiuTopoNestaSubida) {
     var banco = this.carregarBanco();
     var chave = banco.alunoAtual;
@@ -188,6 +237,7 @@ window.Dados = {
     return aluno.rankingEnviadoPorOperacao[operacao] || 0;
   },
 
+  // Grava TUDO (Pontos + Recorde + Novo Degrau + Diagnóstico em Lote) numa única operação de localStorage
   registrarFimDePartida: function (dadosPartida) {
     var banco = this.carregarBanco();
     var chave = banco.alunoAtual;
@@ -204,6 +254,41 @@ window.Dados = {
     var modo = dadosPartida.modo || 'desafio';
     var operacao = dadosPartida.operacao || 'adicao';
 
+    // 1. Consolida o Degrau e Diagnóstico em Lote vindos da memória RAM do Motor
+    if (window.Motor && typeof window.Motor.exportarResumoSessao === 'function') {
+      var resumoMotor = window.Motor.exportarResumoSessao();
+      if (!aluno.degrauPorOperacao) {
+        aluno.degrauPorOperacao = { adicao: 0, subtracao: 0, multiplicacao: 0, divisao: 0, mestre: 0 };
+      }
+      var minVet = window.CONFIG.ADAPTATIVO.DEGRAU_INICIAL_VETERANO || 3;
+      var degFinal = resumoMotor.degrauFinal;
+      if ((aluno.vezesNoDegrau11 || 0) >= 2 && degFinal < minVet) {
+        degFinal = minVet;
+      }
+      aluno.degrauPorOperacao[operacao] = degFinal;
+      if (resumoMotor.atingiuTopo11) {
+        aluno.vezesNoDegrau11 = (aluno.vezesNoDegrau11 || 0) + 1;
+      }
+
+      if (!aluno.diag) {
+        aluno.diag = {
+          adicao: this._criarVetorDiag(),
+          subtracao: this._criarVetorDiag(),
+          multiplicacao: this._criarVetorDiag(),
+          divisao: this._criarVetorDiag()
+        };
+      }
+      var deltas = resumoMotor.deltasPorOperacao || {};
+      var ops = ['adicao', 'subtracao', 'multiplicacao', 'divisao'];
+      for (var i = 0; i < ops.length; i++) {
+        var kOp = ops[i];
+        if (deltas[kOp]) {
+          aluno.diag[kOp] = this._mesclarVetorDiag(aluno.diag[kOp], deltas[kOp]);
+        }
+      }
+    }
+
+    // 2. Atualiza Recordes
     var bateuRecorde = false;
     if (modo === 'desafio') {
       if (pontos > (aluno.recordePontos || 0)) {
@@ -223,6 +308,7 @@ window.Dados = {
       aluno.melhorSequencia = melhorSeq;
     }
 
+    // 3. Atualiza Estatísticas Gerais (Mantendo conquistas intactas)
     if (!aluno.estatisticas) {
       aluno.estatisticas = {
         acertosTotais: 0,
@@ -252,6 +338,12 @@ window.Dados = {
       aluno.estatisticas.diasAtivos.push(hoje);
     }
 
+    // Limita diasAtivos aos últimos 15 dias para nunca inflar o localStorage
+    if (aluno.estatisticas.diasAtivos.length > 15) {
+      aluno.estatisticas.diasAtivos = aluno.estatisticas.diasAtivos.slice(-15);
+    }
+
+    // ÚNICA GRAVAÇÃO NO LOCALSTORAGE AO FINAL DA PARTIDA
     this.salvarBanco(banco);
 
     return {
