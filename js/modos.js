@@ -1,9 +1,11 @@
 /**
  * ==========================================================================
- * 9. js/modos.js — Fluxo do Modo Desafio (30s) e Modo Treino (window.Modos)
- * - Alternância ao vivo dentro do Jogo/Treino entre "⌨️ Teclado" e "🎯 5 Opções".
- * - Gerador de 5 Alternativas Inteligentes bem próximas da resposta correta.
- * - Ranking não envia mais sozinho no fim (fica a cargo do botão na tela de Ranking).
+ * 9. js/modos.js — Fluxo do Modo Desafio (30s), Modo Treino e Passo a Passo Real (M6)
+ * Implementa:
+ * - Mascote aparece apenas em momentos-chave (combos, erros, passo a passo) deslizando na lateral
+ * - Clicar em "Ajuda Visual" no Desafio ativa automaticamente o modo de 5 Opções
+ * - Visor com sublinhado (_ / __) e preenchimento imediato a cada botão clicado
+ * - Fluxo Passo a Passo Interativo Real (Unidade -> Dezena)
  * ==========================================================================
  */
 (function () {
@@ -17,7 +19,7 @@
     var estadoPartida = {
         modoAtual: 'desafio',
         operacaoAtual: 'adicao',
-        tipoEntradaAtual: 'teclado', // 'teclado' ou 'opcoes' (5 alternativas)
+        tipoEntradaAtual: 'teclado',
         pontos: 0,
         acertos: 0,
         erros: 0,
@@ -27,7 +29,21 @@
         maxMult: 1,
         contaAtual: null,
         bloqueadoOpcoes: false,
-        timeoutTransicao: null
+        timeoutTransicao: null,
+        passoAPasso: {
+            ativo: false,
+            etapa: 'uni',
+            alvoUni: 0,
+            alvoDez: 0,
+            digitoUni: null,
+            digitoDez: null,
+            falaUni: '',
+            falaDez: '',
+            vaiUm: false,
+            emprestimo: false,
+            dezRestante: 0,
+            uniNova: 0
+        }
     };
 
     var NOMES_OPERACOES = {
@@ -127,10 +143,11 @@
     }
 
     // Gera alternativas inteligentes (3 para Treino, 5 para Desafio)
-    function gerarAlternativasInteligentes(respostaCorreta, quantidade) {
+    function gerarAlternativasInteligentes(respostaCorreta, quantidade, maxValorPermitido) {
         var certa = Number(respostaCorreta);
         var opcoes = [certa];
         var qtdDesejada = quantidade || 3;
+        var limiteMax = maxValorPermitido !== undefined ? maxValorPermitido : 999;
 
         var deltas = [-3, -2, -1, 1, 2, 3, -4, 4, -5, 5, 10, -10];
         for (var i = deltas.length - 1; i > 0; i--) {
@@ -142,21 +159,24 @@
 
         for (var k = 0; k < deltas.length && opcoes.length < qtdDesejada; k++) {
             var cand = certa + deltas[k];
-            if (cand >= 0 && opcoes.indexOf(cand) === -1) {
+            if (cand >= 0 && cand <= limiteMax && opcoes.indexOf(cand) === -1) {
                 opcoes.push(cand);
             }
         }
 
         var inc = 1;
         while (opcoes.length < qtdDesejada) {
-            var extra = certa + inc;
-            if (extra >= 0 && opcoes.indexOf(extra) === -1) {
-                opcoes.push(extra);
+            var extraPos = certa + inc;
+            var extraNeg = certa - inc;
+            if (extraPos >= 0 && extraPos <= limiteMax && opcoes.indexOf(extraPos) === -1) {
+                opcoes.push(extraPos);
+            } else if (extraNeg >= 0 && extraNeg <= limiteMax && opcoes.indexOf(extraNeg) === -1) {
+                opcoes.push(extraNeg);
             }
             inc++;
+            if (inc > 30) break;
         }
 
-        // Embaralha
         for (var m = opcoes.length - 1; m > 0; m--) {
             var n = Math.floor(Math.random() * (m + 1));
             var aux = opcoes[m];
@@ -167,7 +187,102 @@
         return opcoes;
     }
 
+    /**
+     * Constrói os dados do Passo a Passo Interativo Real (Unidade -> Dezena)
+     */
+    function prepararDadosPassoAPasso(conta, ajudaMarcada) {
+        var op = String(conta.operacao || '').toLowerCase();
+        var ehSoma = (op === 'adicao' || op === '+');
+        var ehSub = (op === 'subtracao' || op === '-' || op === '−');
+        var numA = conta.numA;
+        var numB = conta.numB;
+        var resp = conta.resposta;
 
+        var elegivelDuasColunas = Boolean(
+            ajudaMarcada &&
+            resp >= 10 &&
+            ((ehSoma && (numA >= 10 || numB >= 10)) || (ehSub && numA >= 20))
+        );
+
+        if (!elegivelDuasColunas) {
+            var falaSimples = '';
+            if (ajudaMarcada) {
+                if (ehSoma) {
+                    falaSimples = 'Quanto é <strong>' + numA + ' + ' + numB + '</strong>?';
+                } else if (ehSub) {
+                    falaSimples = 'Quanto é <strong>' + numA + ' − ' + numB + '</strong>?';
+                }
+            }
+            return {
+                ativo: false,
+                falaSimples: falaSimples
+            };
+        }
+
+        var dezA = Math.floor(numA / 10);
+        var uniA = numA % 10;
+        var dezB = Math.floor(numB / 10);
+        var uniB = numB % 10;
+
+        if (ehSoma) {
+            var somaUni = uniA + uniB;
+            var vaiUm = somaUni >= 10;
+            var digitoUni = somaUni % 10;
+            var digitoDez = dezA + dezB + (vaiUm ? 1 : 0);
+
+            var falaUniSoma = vaiUm
+                ? 'Unidades: <strong>' + uniA + ' + ' + uniB + '</strong> passa de 9! Qual fica na unidade?'
+                : 'Comece pelas unidades: quanto é <strong>' + uniA + ' + ' + uniB + '</strong>?';
+
+            var falaDezSoma = vaiUm
+                ? 'Subiu <strong>+1</strong>! Dezenas: quanto é <strong>1 + ' + dezA + ' + ' + dezB + '</strong>?'
+                : 'Agora as dezenas: quanto é <strong>' + dezA + ' + ' + dezB + '</strong>?';
+
+            return {
+                ativo: true,
+                etapa: 'uni',
+                alvoUni: digitoUni,
+                alvoDez: digitoDez,
+                digitoUni: null,
+                digitoDez: null,
+                falaUni: falaUniSoma,
+                falaDez: falaDezSoma,
+                vaiUm: vaiUm,
+                emprestimo: false,
+                dezRestante: dezA,
+                uniNova: uniA
+            };
+        } else {
+            var precisaEmp = uniA < uniB;
+            var uniEfetiva = precisaEmp ? (uniA + 10) : uniA;
+            var dezEfetiva = precisaEmp ? (dezA - 1) : dezA;
+            var difUni = uniEfetiva - uniB;
+            var difDez = dezEfetiva - dezB;
+
+            var falaUniSub = precisaEmp
+                ? 'Unidades: <strong>' + uniA + '</strong> virou <strong>' + uniEfetiva + '</strong>! Quanto é <strong>' + uniEfetiva + ' − ' + uniB + '</strong>?'
+                : 'Comece pelas unidades: quanto é <strong>' + uniA + ' − ' + uniB + '</strong>?';
+
+            var falaDezSub = precisaEmp
+                ? 'Agora as dezenas: quanto é <strong>' + dezEfetiva + ' − ' + dezB + '</strong>?'
+                : 'Agora as dezenas: quanto é <strong>' + dezA + ' − ' + dezB + '</strong>?';
+
+            return {
+                ativo: true,
+                etapa: 'uni',
+                alvoUni: difUni,
+                alvoDez: difDez,
+                digitoUni: null,
+                digitoDez: null,
+                falaUni: falaUniSub,
+                falaDez: falaDezSub,
+                vaiUm: false,
+                emprestimo: precisaEmp,
+                dezRestante: dezEfetiva,
+                uniNova: uniEfetiva
+            };
+        }
+    }
 
     function gerarExplicacaoDidatica(conta) {
         var a = conta.numA;
@@ -176,55 +291,34 @@
         var op = conta.operacao;
 
         if (op === 'adicao' || op === '+') {
-            if ((a % 10) + (b % 10) >= 10) {
-                return '💡 Nas unidades, ' + (a % 10) + ' + ' + (b % 10) + ' dá ' + ((a % 10) + (b % 10)) + ' (vai 1!). Total: ' + r + '!';
-            }
-            if (a < 10 && b > 0 && a + b > 10) {
-                var falta = 10 - a;
-                var sobra = b - falta;
-                return '💡 Dica: ' + a + ' + ' + falta + ' forma 10, mais ' + sobra + ' dá ' + r + '!';
-            }
-            return '💡 Quase! ' + a + ' + ' + b + ' é igual a ' + r + '.';
+            return '💡 Olhe só: <strong>' + a + ' + ' + b + ' = ' + r + '</strong>!';
         }
         if (op === 'subtracao' || op === '-') {
-            if ((a % 10) < (b % 10)) {
-                return '💡 Empréstimo: ' + ((a % 10) + 10) + ' − ' + (b % 10) + ' nas unidades! Total: ' + r + '!';
-            }
-            return '💡 Tirando ' + b + ' de ' + a + ', sobram ' + r + '!';
+            return '💡 Tirando <strong>' + b + '</strong> de <strong>' + a + '</strong>, sobram <strong>' + r + '</strong>!';
         }
         if (op === 'multiplicacao' || op === '×') {
-            return '💡 Lembre: ' + a + ' vezes ' + b + ' é igual a ' + r + '!';
+            return '💡 Lembre: <strong>' + a + ' × ' + b + ' = ' + r + '</strong>!';
         }
         if (op === 'divisao' || op === '÷') {
-            return '💡 Pois ' + b + ' × ' + r + ' = ' + a + '. Então dá ' + r + '!';
+            return '💡 Pois <strong>' + b + ' × ' + r + ' = ' + a + '</strong>. Dá <strong>' + r + '</strong>!';
         }
-        return '💡 A resposta correta é ' + r + '. Vamos para a próxima!';
+        return '💡 A resposta correta é <strong>' + r + '</strong>!';
     }
 
-    function definirFalaMascoteDireta(texto) {
+    function definirFalaMascoteDireta(texto, destacarDuolingo, duracaoMs) {
         if (window.Mascotes && typeof window.Mascotes.falarTextoDireto === 'function') {
-            window.Mascotes.falarTextoDireto(texto, false);
-            return;
-        }
-        var areaMascote = document.getElementById('mascote-area-jogo');
-        if (!areaMascote) return;
-        var balao = areaMascote.querySelector('.mascote-balao') || document.getElementById('mascote-balao');
-        if (balao) {
-            balao.textContent = texto;
-            balao.classList.remove('balao-animar');
-            void balao.offsetWidth;
-            balao.classList.add('balao-animar');
+            window.Mascotes.falarTextoDireto(texto, Boolean(destacarDuolingo), duracaoMs || 3600);
         }
     }
 
     var Modos = {
         modoAtual: 'desafio',
         operacaoAtual: 'adicao',
-        preferenciaEntradaDesafio: 'teclado', // Guarda a escolha do aluno durante a sessão
+        preferenciaEntradaDesafio: 'teclado',
         preferenciaEntradaTreino: 'opcoes',
         partidaAtiva: false,
 
-        // Permite alternar entre Teclado e 5 Opções A QUALQUER MOMENTO dentro do jogo!
+        // Alterna no Desafio entre Teclado e 5 Opções
         alternarMetodoEntradaNoJogo: function () {
             if (!partidaAtiva) return;
 
@@ -238,15 +332,7 @@
             }
 
             this._sincronizarInterfaceEntrada();
-
-            // Prepara imediatamente a questão atual para o novo método escolhido
-            if (estadoPartida.contaAtual) {
-                if (novoTipo === 'opcoes') {
-                    this._renderizarBotoesOpcoes(estadoPartida.contaAtual);
-                } else if (window.Teclado && typeof window.Teclado.prepararParaNovaConta === 'function') {
-                    window.Teclado.prepararParaNovaConta(estadoPartida.contaAtual.resposta);
-                }
-            }
+            this._configurarEntradaParaEstadoAtual();
         },
 
         _sincronizarInterfaceEntrada: function () {
@@ -256,11 +342,15 @@
             var btnTroca = document.getElementById('btn-alternar-entrada-jogo');
 
             if (elTeclado) elTeclado.classList.toggle('oculto', usarOpcoes);
-            if (elTreino) elTreino.classList.toggle('oculto', !usarOpcoes);
+            if (elTreino) {
+                elTreino.classList.toggle('oculto', !usarOpcoes);
+                elTreino.classList.toggle('grade-opcoes-3', this.modoAtual === 'treino');
+                elTreino.classList.toggle('grade-opcoes-5', this.modoAtual === 'desafio');
+            }
 
             if (btnTroca) {
-                // Mostra no botão o ícone da outra modalidade para qual ele pode chavear
-                btnTroca.innerHTML = usarOpcoes ? '⌨️ Usar Teclado' : '🎯 5 Opções';
+                btnTroca.classList.toggle('oculto', this.modoAtual === 'treino');
+                btnTroca.innerHTML = usarOpcoes ? '⌨️ Teclado' : '🎯 5 Opções';
                 btnTroca.classList.toggle('modo-opcoes-ativo', usarOpcoes);
             }
         },
@@ -274,9 +364,7 @@
                 this.operacaoAtual = operacao || 'adicao';
                 this.partidaAtiva = partidaAtiva = true;
 
-                var entradaInicial = (this.modoAtual === 'treino')
-                    ? this.preferenciaEntradaTreino
-                    : this.preferenciaEntradaDesafio;
+                var entradaInicial = (this.modoAtual === 'treino') ? 'opcoes' : this.preferenciaEntradaDesafio;
 
                 estadoPartida = {
                     modoAtual: this.modoAtual,
@@ -291,7 +379,8 @@
                     maxMult: 1,
                     contaAtual: null,
                     bloqueadoOpcoes: false,
-                    timeoutTransicao: null
+                    timeoutTransicao: null,
+                    passoAPasso: { ativo: false, etapa: 'uni' }
                 };
 
                 if (window.Motor && typeof window.Motor.iniciarPartida === 'function') {
@@ -306,9 +395,14 @@
                 }
 
                 if (window.Teclado && typeof window.Teclado.inicializar === 'function') {
-                    window.Teclado.inicializar(function (valorDigitado) {
-                        self.verificarRespostaTeclado(valorDigitado);
-                    });
+                    window.Teclado.inicializar(
+                        function (valorFinal) {
+                            self.verificarRespostaTeclado(valorFinal);
+                        },
+                        function (parcialAtual) {
+                            self._aoDigitarNoTecladoParcial(parcialAtual);
+                        }
+                    );
                 }
 
                 var nomeModo = this.modoAtual === 'treino' ? '🎯 Treino' : '⚡ Desafio';
@@ -366,6 +460,9 @@
             if (window.Visual && typeof window.Visual.limparDestaquesArminha === 'function') {
                 window.Visual.limparDestaquesArminha();
             }
+            if (window.Mascotes && typeof window.Mascotes.esconder === 'function') {
+                window.Mascotes.esconder();
+            }
         },
 
         _sincronizarBotaoAjuda: function (ativo) {
@@ -377,7 +474,7 @@
             if (chkAjuda) chkAjuda.checked = Boolean(ativo);
             if (labelAjuda) labelAjuda.classList.toggle('ajuda-ativa', Boolean(ativo));
             if (textoBtn) {
-                textoBtn.textContent = ativo ? 'Ajuda Ativa' : 'Ajuda Visual';
+                textoBtn.textContent = ativo ? 'Ajuda Passo a Passo Ativa' : 'Ver Ajuda Visual';
             }
             if (!ativo) {
                 if (window.Visual && typeof window.Visual.limpar === 'function') {
@@ -386,6 +483,9 @@
                 if (containerAjuda) {
                     containerAjuda.classList.add('oculto');
                     containerAjuda.innerHTML = '';
+                }
+                if (window.Mascotes && typeof window.Mascotes.esconder === 'function') {
+                    window.Mascotes.esconder();
                 }
             }
         },
@@ -477,8 +577,7 @@
             var elDisplay = document.getElementById('display-resposta');
 
             if (elDisplay) {
-                elDisplay.textContent = '?';
-                elDisplay.classList.remove('display-erro', 'display-correto');
+                elDisplay.classList.remove('display-erro', 'display-correto', 'tremer');
             }
 
             if (window.Visual && typeof window.Visual.renderizarContaNoPalco === 'function') {
@@ -487,27 +586,144 @@
                 elConta.textContent = estadoPartida.contaAtual.texto;
             }
 
-            if (estadoPartida.tipoEntradaAtual === 'opcoes') {
-                this._renderizarBotoesOpcoes(estadoPartida.contaAtual);
-            } else {
-                if (window.Teclado && typeof window.Teclado.prepararParaNovaConta === 'function') {
-                    window.Teclado.prepararParaNovaConta(estadoPartida.contaAtual.resposta);
-                }
-            }
-
             var chkAjuda = document.getElementById('chk-ajuda');
-            if (chkAjuda && chkAjuda.checked) {
-                this.alternarAjudaVisual(true);
+            var ajudaAtiva = Boolean(chkAjuda && chkAjuda.checked);
+
+            this._aplicarEstadoAjudaEPassoAPasso(ajudaAtiva);
+        },
+
+        /**
+         * Configura o Passo a Passo Interativo Real (Unidade -> Dezena) ou a ajuda visual normal
+         */
+        _aplicarEstadoAjudaEPassoAPasso: function (ajudaAtiva) {
+            var conta = estadoPartida.contaAtual;
+            if (!conta) return;
+
+            var containerAjuda = document.getElementById('container-ajuda-visual');
+            var dadosPasso = prepararDadosPassoAPasso(conta, ajudaAtiva);
+            estadoPartida.passoAPasso = dadosPasso;
+
+            if (dadosPasso.ativo) {
+                if (containerAjuda) {
+                    containerAjuda.classList.add('oculto');
+                    containerAjuda.innerHTML = '';
+                }
+                this._atualizarUIEtapaPassoAPasso();
+            } else {
+                if (window.Visual && typeof window.Visual.limparDestaquesArminha === 'function') {
+                    window.Visual.limparDestaquesArminha();
+                }
+
+                if (ajudaAtiva) {
+                    var op = String(conta.operacao || '').toLowerCase();
+                    var ehArminhaSimples = (op === 'adicao' || op === '+' || op === 'subtracao' || op === '-' || op === '−');
+                    if (ehArminhaSimples && window.Visual && typeof window.Visual.destacarColunaArminha === 'function') {
+                        window.Visual.destacarColunaArminha('uni', {});
+                    }
+                    if (dadosPasso.falaSimples) {
+                        definirFalaMascoteDireta(dadosPasso.falaSimples, true, 3200);
+                    }
+                    if (containerAjuda && window.Visual && typeof window.Visual.renderizarAjuda === 'function') {
+                        containerAjuda.classList.remove('oculto');
+                        window.Visual.renderizarAjuda(conta, this.modoAtual, containerAjuda);
+                    }
+                } else if (containerAjuda) {
+                    containerAjuda.classList.add('oculto');
+                    containerAjuda.innerHTML = '';
+                }
+
+                this._configurarEntradaParaEstadoAtual();
             }
         },
 
-        _renderizarBotoesOpcoes: function (conta) {
+        /**
+         * Atualiza a cápsula neon (Unidade ou Dezena), o sublinhado em foco e o balão lateral da coruja
+         */
+        _atualizarUIEtapaPassoAPasso: function () {
+            var p = estadoPartida.passoAPasso;
+            var conta = estadoPartida.contaAtual;
+            var elDisplay = document.getElementById('display-resposta');
+            if (!p || !p.ativo || !conta) return;
+
+            if (p.etapa === 'uni') {
+                if (window.Visual && typeof window.Visual.destacarColunaArminha === 'function') {
+                    window.Visual.destacarColunaArminha('uni', {
+                        vaiUm: false,
+                        emprestimo: p.emprestimo,
+                        dezRestante: p.dezRestante,
+                        uniNova: p.uniNova
+                    });
+                }
+                definirFalaMascoteDireta(p.falaUni, true, 4000);
+            } else {
+                if (window.Visual && typeof window.Visual.destacarColunaArminha === 'function') {
+                    window.Visual.destacarColunaArminha('dez', {
+                        vaiUm: p.vaiUm,
+                        emprestimo: p.emprestimo,
+                        dezRestante: p.dezRestante,
+                        uniNova: p.uniNova
+                    });
+                }
+                definirFalaMascoteDireta(p.falaDez, true, 4000);
+            }
+
+            if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                window.Visual.atualizarVisorSublinhado(elDisplay, '', String(conta.resposta).length, true, p);
+            }
+
+            this._configurarEntradaParaEstadoAtual();
+        },
+
+        _configurarEntradaParaEstadoAtual: function () {
+            var conta = estadoPartida.contaAtual;
+            if (!conta) return;
+
+            var p = estadoPartida.passoAPasso;
+            var alvoAtual = (p && p.ativo)
+                ? (p.etapa === 'uni' ? p.alvoUni : p.alvoDez)
+                : conta.resposta;
+
+            if (estadoPartida.tipoEntradaAtual === 'opcoes') {
+                this._renderizarBotoesOpcoes(alvoAtual, Boolean(p && p.ativo));
+            } else if (window.Teclado && typeof window.Teclado.prepararParaNovaConta === 'function') {
+                window.Teclado.prepararParaNovaConta(alvoAtual, Boolean(p && p.ativo));
+            }
+        },
+
+        _aoDigitarNoTecladoParcial: function (parcialTexto) {
+            var conta = estadoPartida.contaAtual;
+            if (!conta) return;
+
+            var elDisplay = document.getElementById('display-resposta');
+            var p = estadoPartida.passoAPasso;
+
+            if (p && p.ativo) {
+                var copiaPasso = {
+                    ativo: true,
+                    etapa: p.etapa,
+                    digitoUni: p.etapa === 'uni' ? (parcialTexto.length > 0 ? parcialTexto : null) : p.digitoUni,
+                    digitoDez: p.etapa === 'dez' ? (parcialTexto.length > 0 ? parcialTexto : null) : p.digitoDez
+                };
+                if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                    window.Visual.atualizarVisorSublinhado(elDisplay, parcialTexto, String(conta.resposta).length, true, copiaPasso);
+                }
+            } else if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                window.Visual.atualizarVisorSublinhado(elDisplay, parcialTexto, String(conta.resposta).length, undefined, null);
+            }
+        },
+
+        _renderizarBotoesOpcoes: function (valorCorretoAlvo, ehColunaUnica) {
             var self = this;
             var containerTreino = document.getElementById('container-treino');
             if (!containerTreino) return;
 
             containerTreino.innerHTML = '';
-            var opcoes = gerarAlternativasInteligentes(conta.resposta);
+            var qtdBotoes = (this.modoAtual === 'desafio') ? 5 : 3;
+            var limiteMax = ehColunaUnica ? 9 : 999;
+            var opcoes = gerarAlternativasInteligentes(valorCorretoAlvo, qtdBotoes, limiteMax);
+
+            containerTreino.classList.toggle('grade-opcoes-3', qtdBotoes === 3);
+            containerTreino.classList.toggle('grade-opcoes-5', qtdBotoes === 5);
 
             opcoes.forEach(function (valorOpcao) {
                 var btn = document.createElement('button');
@@ -517,18 +733,100 @@
                 btn.setAttribute('data-valor', String(valorOpcao));
 
                 btn.addEventListener('click', function () {
-                    if (self.modoAtual === 'desafio') {
-                        self._verificarEscolhaOpcaoDesafio(btn, valorOpcao, conta, containerTreino);
-                    } else {
-                        self._verificarEscolhaTreino(btn, valorOpcao, conta, containerTreino);
-                    }
+                    self._processarCliqueBotaoOpcao(btn, valorOpcao, containerTreino);
                 });
 
                 containerTreino.appendChild(btn);
             });
         },
 
-        _verificarEscolhaOpcaoDesafio: function (botaoClicado, valorEscolhido, conta, container) {
+        _processarCliqueBotaoOpcao: function (botaoClicado, valorEscolhido, container) {
+            if (!partidaAtiva || estadoPartida.bloqueadoOpcoes || !estadoPartida.contaAtual) return;
+
+            var self = this;
+            var conta = estadoPartida.contaAtual;
+            var p = estadoPartida.passoAPasso;
+            var elDisplay = document.getElementById('display-resposta');
+
+            // CASO 1: Passo a Passo Interativo por Coluna (Unidade -> Dezena)
+            if (p && p.ativo) {
+                var alvoColuna = (p.etapa === 'uni') ? p.alvoUni : p.alvoDez;
+                var acertouColuna = (Number(valorEscolhido) === Number(alvoColuna));
+
+                if (p.etapa === 'uni') {
+                    p.digitoUni = valorEscolhido;
+                    if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                        window.Visual.atualizarVisorSublinhado(elDisplay, '', String(conta.resposta).length, true, p);
+                    }
+
+                    if (acertouColuna) {
+                        botaoClicado.classList.add('alternativa-correta');
+                        if (window.Som && typeof window.Som.tocarAcerto === 'function') window.Som.tocarAcerto();
+
+                        estadoPartida.bloqueadoOpcoes = true;
+                        setTimeout(function () {
+                            if (!partidaAtiva) return;
+                            estadoPartida.bloqueadoOpcoes = false;
+                            p.etapa = 'dez';
+                            self._atualizarUIEtapaPassoAPasso();
+                        }, 240);
+                    } else {
+                        botaoClicado.classList.add('alternativa-errada');
+                        botaoClicado.disabled = true;
+                        if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
+
+                        setTimeout(function () {
+                            if (!partidaAtiva) return;
+                            p.digitoUni = null;
+                            if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                                window.Visual.atualizarVisorSublinhado(elDisplay, '', String(conta.resposta).length, true, p);
+                            }
+                        }, 320);
+                    }
+                    return;
+                }
+
+                // Etapa 2: Coluna das Dezenas ('dez')
+                p.digitoDez = valorEscolhido;
+                if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                    window.Visual.atualizarVisorSublinhado(elDisplay, '', String(conta.resposta).length, true, p);
+                }
+
+                if (acertouColuna) {
+                    if (this.modoAtual === 'desafio') {
+                        this._finalizarTentativaOpcaoDesafio(botaoClicado, conta.resposta, conta, container);
+                    } else {
+                        this._finalizarTentativaTreino(botaoClicado, conta.resposta, conta, container);
+                    }
+                } else {
+                    botaoClicado.classList.add('alternativa-errada');
+                    botaoClicado.disabled = true;
+                    if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
+
+                    setTimeout(function () {
+                        if (!partidaAtiva) return;
+                        p.digitoDez = null;
+                        if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                            window.Visual.atualizarVisorSublinhado(elDisplay, '', String(conta.resposta).length, true, p);
+                        }
+                    }, 320);
+                }
+                return;
+            }
+
+            // CASO 2: Conta direta
+            if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                window.Visual.atualizarVisorSublinhado(elDisplay, String(valorEscolhido), String(conta.resposta).length, undefined, null);
+            }
+
+            if (this.modoAtual === 'desafio') {
+                this._finalizarTentativaOpcaoDesafio(botaoClicado, valorEscolhido, conta, container);
+            } else {
+                this._finalizarTentativaTreino(botaoClicado, valorEscolhido, conta, container);
+            }
+        },
+
+        _finalizarTentativaOpcaoDesafio: function (botaoClicado, valorEscolhido, conta, container) {
             if (!partidaAtiva || estadoPartida.bloqueadoOpcoes) return;
             estadoPartida.bloqueadoOpcoes = true;
 
@@ -539,10 +837,6 @@
 
             for (var i = 0; i < botoes.length; i++) {
                 botoes[i].disabled = true;
-            }
-
-            if (elDisplay) {
-                elDisplay.textContent = conta.resposta;
             }
 
             if (window.Motor && typeof window.Motor.registrarResposta === 'function') {
@@ -571,24 +865,25 @@
                 if (marcosFogo.indexOf(estadoPartida.sequenciaAtual) !== -1) {
                     if (window.Som && typeof window.Som.tocarArpejo === 'function') window.Som.tocarArpejo();
                     dispararChamaNeon(faixaCombo.multiplicador);
+                    // Mascote desliza na lateral APENAS nos marcos de combo!
+                    if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
+                        window.Mascotes.atualizarFala('combo', { multiplicador: faixaCombo.multiplicador });
+                    }
                 } else if (window.Som && typeof window.Som.tocarAcerto === 'function') {
                     window.Som.tocarAcerto();
                 }
 
-                if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
-                    if (estadoPartida.sequenciaAtual >= 3) {
-                        window.Mascotes.atualizarFala('combo', { multiplicador: faixaCombo.multiplicador });
-                    } else {
-                        window.Mascotes.atualizarFala('acerto');
-                    }
-                }
-
                 estadoPartida.timeoutTransicao = setTimeout(function () {
                     if (partidaAtiva) self.proximaQuestao();
-                }, 140);
+                }, 160);
             } else {
                 botaoClicado.classList.add('alternativa-errada');
-                if (elDisplay) elDisplay.classList.add('display-erro');
+                if (elDisplay) {
+                    if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                        window.Visual.atualizarVisorSublinhado(elDisplay, String(conta.resposta), String(conta.resposta).length, undefined, null);
+                    }
+                    elDisplay.classList.add('display-erro');
+                }
 
                 for (var j = 0; j < botoes.length; j++) {
                     if (Number(botoes[j].getAttribute('data-valor')) === Number(conta.resposta)) {
@@ -601,17 +896,16 @@
                 this._atualizarPlacarUI();
 
                 if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
-                if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
-                    window.Mascotes.atualizarFala('erro');
-                }
+                // Mascote desliza na lateral para dar dica de erro!
+                definirFalaMascoteDireta(gerarExplicacaoDidatica(conta), false, 2800);
 
                 estadoPartida.timeoutTransicao = setTimeout(function () {
                     if (partidaAtiva) self.proximaQuestao();
-                }, 350);
+                }, 360);
             }
         },
 
-        _verificarEscolhaTreino: function (botaoClicado, valorEscolhido, conta, container) {
+        _finalizarTentativaTreino: function (botaoClicado, valorEscolhido, conta, container) {
             if (!partidaAtiva || estadoPartida.bloqueadoOpcoes) return;
             estadoPartida.bloqueadoOpcoes = true;
 
@@ -622,10 +916,6 @@
 
             for (var i = 0; i < botoes.length; i++) {
                 botoes[i].disabled = true;
-            }
-
-            if (elDisplay) {
-                elDisplay.textContent = conta.resposta;
             }
 
             if (window.Motor && typeof window.Motor.registrarResposta === 'function') {
@@ -640,22 +930,26 @@
 
                 if (estadoPartida.sequenciaAtual % 5 === 0) {
                     dispararChamaNeon(3);
+                    definirFalaMascoteDireta('🔥 ' + estadoPartida.sequenciaAtual + ' seguidos! Mandou muito bem!', false, 2400);
                 }
 
                 if (window.Som && typeof window.Som.tocarAcerto === 'function') {
                     window.Som.tocarAcerto();
                 }
 
-                definirFalaMascoteDireta('🔥 Mandou bem! ' + conta.texto + ' <strong>' + conta.resposta + '</strong>!');
-
                 estadoPartida.timeoutTransicao = setTimeout(function () {
                     if (partidaAtiva) self.proximaQuestao();
-                }, 800);
+                }, 750);
             } else {
                 estadoPartida.erros++;
                 estadoPartida.sequenciaAtual = 0;
                 botaoClicado.classList.add('alternativa-errada');
-                if (elDisplay) elDisplay.classList.add('display-erro');
+                if (elDisplay) {
+                    if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                        window.Visual.atualizarVisorSublinhado(elDisplay, String(conta.resposta), String(conta.resposta).length, undefined, null);
+                    }
+                    elDisplay.classList.add('display-erro');
+                }
 
                 for (var j = 0; j < botoes.length; j++) {
                     if (Number(botoes[j].getAttribute('data-valor')) === Number(conta.resposta)) {
@@ -667,18 +961,60 @@
                     window.Som.tocarErro();
                 }
 
-                var explicacao = gerarExplicacaoDidatica(conta);
-                definirFalaMascoteDireta(explicacao);
+                // Mascote desliza na lateral explicando o erro!
+                definirFalaMascoteDireta(gerarExplicacaoDidatica(conta), false, 3200);
 
                 estadoPartida.timeoutTransicao = setTimeout(function () {
                     if (partidaAtiva) self.proximaQuestao();
-                }, 1500);
+                }, 1450);
             }
         },
 
-        // Trata a digitação no teclado virtual/físico tanto no Desafio quanto no Treino
         verificarRespostaTeclado: function (entradaTexto) {
             if (!partidaAtiva || !estadoPartida.contaAtual) return;
+
+            var self = this;
+            var conta = estadoPartida.contaAtual;
+            var p = estadoPartida.passoAPasso;
+            var elDisplay = document.getElementById('display-resposta');
+
+            if (p && p.ativo) {
+                var digito = Number(entradaTexto);
+                if (p.etapa === 'uni') {
+                    if (digito === Number(p.alvoUni)) {
+                        p.digitoUni = String(digito);
+                        if (window.Som && typeof window.Som.tocarAcerto === 'function') window.Som.tocarAcerto();
+                        p.etapa = 'dez';
+                        this._atualizarUIEtapaPassoAPasso();
+                    } else {
+                        if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
+                        if (elDisplay) elDisplay.classList.add('tremer');
+                        setTimeout(function () {
+                            if (elDisplay) elDisplay.classList.remove('tremer');
+                            p.digitoUni = null;
+                            self._atualizarUIEtapaPassoAPasso();
+                        }, 280);
+                    }
+                    return;
+                } else {
+                    if (digito === Number(p.alvoDez)) {
+                        p.digitoDez = String(digito);
+                        if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                            window.Visual.atualizarVisorSublinhado(elDisplay, String(conta.resposta), String(conta.resposta).length, true, p);
+                        }
+                        this.verificarRespostaDesafio(String(conta.resposta));
+                    } else {
+                        if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
+                        if (elDisplay) elDisplay.classList.add('tremer');
+                        setTimeout(function () {
+                            if (elDisplay) elDisplay.classList.remove('tremer');
+                            p.digitoDez = null;
+                            self._atualizarUIEtapaPassoAPasso();
+                        }, 280);
+                    }
+                    return;
+                }
+            }
 
             if (this.modoAtual === 'treino') {
                 this._verificarTecladoNoTreino(entradaTexto);
@@ -704,34 +1040,39 @@
                 estadoPartida.treinoAcertos++;
                 estadoPartida.sequenciaAtual++;
                 if (elDisplay) elDisplay.classList.add('display-correto');
-                if (estadoPartida.sequenciaAtual % 5 === 0) dispararChamaNeon(3);
+                if (estadoPartida.sequenciaAtual % 5 === 0) {
+                    dispararChamaNeon(3);
+                    definirFalaMascoteDireta('🔥 ' + estadoPartida.sequenciaAtual + ' seguidos! Mandou bem!', false, 2400);
+                }
                 if (window.Som && typeof window.Som.tocarAcerto === 'function') window.Som.tocarAcerto();
-                definirFalaMascoteDireta('🔥 Mandou bem! ' + conta.texto + ' <strong>' + conta.resposta + '</strong>!');
 
                 estadoPartida.timeoutTransicao = setTimeout(function () {
                     if (partidaAtiva) self.proximaQuestao();
-                }, 800);
+                }, 750);
             } else {
                 estadoPartida.erros++;
                 estadoPartida.sequenciaAtual = 0;
                 if (elDisplay) {
-                    elDisplay.textContent = conta.resposta;
+                    if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+                        window.Visual.atualizarVisorSublinhado(elDisplay, String(conta.resposta), String(conta.resposta).length, undefined, null);
+                    }
                     elDisplay.classList.add('display-erro');
                 }
                 if (window.Som && typeof window.Som.tocarErro === 'function') window.Som.tocarErro();
-                definirFalaMascoteDireta(gerarExplicacaoDidatica(conta));
+                definirFalaMascoteDireta(gerarExplicacaoDidatica(conta), false, 3200);
 
                 estadoPartida.timeoutTransicao = setTimeout(function () {
                     if (partidaAtiva) self.proximaQuestao();
-                }, 1500);
+                }, 1450);
             }
         },
 
         verificarRespostaDesafio: function (entradaTexto) {
             if (!partidaAtiva || !estadoPartida.contaAtual) return;
 
+            var conta = estadoPartida.contaAtual;
             var valorDigitado = Number(entradaTexto);
-            var respostaCerta = Number(estadoPartida.contaAtual.resposta);
+            var respostaCerta = Number(conta.resposta);
             var acertou = (valorDigitado === respostaCerta);
 
             if (window.Motor && typeof window.Motor.registrarResposta === 'function') {
@@ -750,9 +1091,7 @@
                     estadoPartida.maxMult = faixaCombo.multiplicador;
                 }
 
-                var pontosGanhos = 100 * faixaCombo.multiplicador;
-                estadoPartida.pontos += pontosGanhos;
-
+                estadoPartida.pontos += (100 * faixaCombo.multiplicador);
                 this._atualizarPlacarUI();
 
                 var marcosFogo = (window.CONFIG && window.CONFIG.COMBO && window.CONFIG.COMBO.MARCOS_FOGO) || [3, 7, 10, 14, 18, 22, 26, 30];
@@ -761,16 +1100,12 @@
                         window.Som.tocarArpejo();
                     }
                     dispararChamaNeon(faixaCombo.multiplicador);
+                    // Mascote desliza na lateral apenas nos marcos de combo!
+                    if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
+                        window.Mascotes.atualizarFala('combo', { multiplicador: faixaCombo.multiplicador });
+                    }
                 } else if (window.Som && typeof window.Som.tocarAcerto === 'function') {
                     window.Som.tocarAcerto();
-                }
-
-                if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
-                    if (estadoPartida.sequenciaAtual >= 3) {
-                        window.Mascotes.atualizarFala('combo', { multiplicador: faixaCombo.multiplicador });
-                    } else {
-                        window.Mascotes.atualizarFala('acerto');
-                    }
                 }
 
                 this.proximaQuestao();
@@ -780,9 +1115,8 @@
                 this._atualizarPlacarUI();
 
                 if (window.Som) window.Som.tocarErro();
-                if (window.Mascotes && typeof window.Mascotes.atualizarFala === 'function') {
-                    window.Mascotes.atualizarFala('erro');
-                }
+                // Mascote desliza na lateral dando a dica do erro!
+                definirFalaMascoteDireta(gerarExplicacaoDidatica(conta), false, 2800);
 
                 var self = this;
                 if (window.Teclado && typeof window.Teclado.mostrarErroTemporario === 'function') {
@@ -797,19 +1131,23 @@
             }
         },
 
+        /**
+         * Ao ligar a Ajuda Visual:
+         * - Se estiver no Desafio usando o Teclado, muda automaticamente para o modo de 5 Opções!
+         *   Assim libera espaço vertical imediato e oferece as 5 opções de apoio ao aluno.
+         */
         alternarAjudaVisual: function (ativo) {
-            var containerAjuda = document.getElementById('container-ajuda-visual');
-            this._sincronizarBotaoAjuda(ativo);
+            var ligar = Boolean(ativo);
 
-            if (!containerAjuda || !ativo || !estadoPartida.contaAtual) {
-                return;
+            if (ligar && this.modoAtual === 'desafio' && estadoPartida.tipoEntradaAtual !== 'opcoes') {
+                estadoPartida.tipoEntradaAtual = 'opcoes';
+                this.preferenciaEntradaDesafio = 'opcoes';
+                this._sincronizarInterfaceEntrada();
             }
 
-            containerAjuda.classList.remove('oculto');
-
-            if (window.Visual && typeof window.Visual.renderizarAjuda === 'function') {
-                window.Visual.renderizarAjuda(estadoPartida.contaAtual, this.modoAtual, containerAjuda);
-            }
+            this._sincronizarBotaoAjuda(ligar);
+            if (!estadoPartida.contaAtual) return;
+            this._aplicarEstadoAjudaEPassoAPasso(ligar);
         },
 
         encerrarPartida: function () {
@@ -822,13 +1160,15 @@
                 clearTimeout(estadoPartida.timeoutTransicao);
                 estadoPartida.timeoutTransicao = null;
             }
+            if (window.Mascotes && typeof window.Mascotes.esconder === 'function') {
+                window.Mascotes.esconder();
+            }
 
             if (window.Som && typeof window.Som.tocarArpejo === 'function' && estadoPartida.pontos > 0) {
                 window.Som.tocarArpejo();
                 dispararChamaNeon(4);
             }
 
-            // Salva apenas localmente no aparelho (o aluno submete manualmente na tela de Ranking)
             var registro = { recordeAtual: estadoPartida.pontos, bateuRecorde: false };
             if (window.Dados && typeof window.Dados.registrarFimDePartida === 'function') {
                 registro = window.Dados.registrarFimDePartida({

@@ -1,13 +1,15 @@
 /**
- * js/mascotes.js — Rodízio de Mascotes e Balões de Fala (M6: Suporte a Guia Estilo Duolingo)
- * Exposto globalmente em window.Mascotes (Com fallback seguro de configuração)
+ * js/mascotes.js — Mascote Lateral Flutuante com Deslize (Slide-In / Slide-Out)
+ * - Permanece oculto fora da tela por padrão (não ocupa espaço no centro).
+ * - Desliza pela lateral apenas em momentos-chave (combos, dicas de erro, ajuda passo a passo)
+ *   e recolhe sozinho após alguns segundos.
  */
 (function () {
     'use strict';
 
     let mascoteAtual = null;
+    let timerEsconder = null;
 
-    // Fallback interno caso window.CONFIG.mascotes ainda não exista
     const MASCOTES_DEFAULT = {
         coruja: {
             icone: '🦉',
@@ -15,12 +17,8 @@
             frases: {
                 inicio: ["Vamos começar! Olho vivo!", "Estudando com atenção!"],
                 acerto: ["Muito bem! Excelente!", "Isso aí!"],
-                erro: ["Quase lá! Vamos revisar?", "Não desanime, tente de novo!"],
-                combo: ["Impressionante! Multiplicador {mult}×!"],
-                passoUnidades: ["Vamos começar pelas unidades (coluna U)!", "Olhe primeiro para a coluna das unidades!"],
-                passoVaiUm: ["Passou de 9! Fica a unidade e sobe 1 para a dezena!", "Subiu 1 lá para o topo das dezenas!"],
-                passoEmprestimo: ["Pedimos 1 dezena emprestada ao vizinho da frente!", "O vizinho emprestou 10 unidades para ajudar!"],
-                passoDezenas: ["Agora vamos resolver a coluna das dezenas (D)!", "Unidades prontas! Agora some as dezenas!"]
+                erro: ["Quase lá! Quer tentar a 💡 Ajuda?", "Respire fundo e olhe com calma!"],
+                combo: ["Incrível! Multiplicador {mult}×! 🔥", "Voando alto! Combo {mult}×!"]
             }
         },
         raposa: {
@@ -29,12 +27,8 @@
             frases: {
                 inicio: ["Velocidade e foco!", "Hora de acelerar os cálculos!"],
                 acerto: ["Mandou bem demais!", "Ritmo excelente!"],
-                erro: ["Errar faz parte, vamos na próxima!", "Ajustando a mira!"],
-                combo: ["Uau! Combo de {mult}× ativado!"],
-                passoUnidades: ["Foco na direita: vamos começar pelas unidades!", "Primeiro a coluna U, bem rápido!"],
-                passoVaiUm: ["Deu 10 ou mais! Sobe o 1 para a coluna D!", "Olha o 1 subindo para as dezenas!"],
-                passoEmprestimo: ["Pede emprestado ao vizinho da esquerda e continua!", "Com +10 emprestado fica fácil resolver!"],
-                passoDezenas: ["Agora feche a conta na coluna das dezenas!", "Por último, calcule a coluna D!"]
+                erro: ["Opa! Ajustando a mira na próxima!", "Se precisar, ative a 💡 Ajuda!"],
+                combo: ["Uau! Combo de {mult}× ativado! 🔥", "Ninguém segura! {mult}×!"]
             }
         },
         tartaruga: {
@@ -43,18 +37,20 @@
             frases: {
                 inicio: ["Devagar e sempre.", "Com calma a gente chega lá."],
                 acerto: ["Passo a passo, com firmeza!", "Boa resposta!"],
-                erro: ["Sem pressa, respire fundo.", "Vamos com calma na próxima."],
-                combo: ["Olha só que ritmo firme! {mult}×!"],
-                passoUnidades: ["Sem pressa: vamos começar pelas unidades!", "Passo 1: olhe com calma a coluna U."],
-                passoVaiUm: ["Juntou uma dezena nova! Subimos o 1 com cuidado.", "O 1 vai lá para cima da dezena."],
-                passoEmprestimo: ["Vamos pedir 1 dezena emprestada ao vizinho da frente.", "O vizinho ajuda emprestando 10 unidades!"],
-                passoDezenas: ["Passo final: vamos calcular a coluna das dezenas!", "Agora só falta a coluna D."]
+                erro: ["Sem pressa, tente na próxima!", "Use a 💡 Ajuda se quiser ver os passos."],
+                combo: ["Olha só que ritmo firme! {mult}×! 🔥"]
             }
         }
     };
 
+    function limparTimer() {
+        if (timerEsconder) {
+            clearTimeout(timerEsconder);
+            timerEsconder = null;
+        }
+    }
+
     const Mascotes = {
-        // Sorteia aleatoriamente 1 mascote para a partida
         sortearMascote() {
             let configMascotes = null;
             if (window.CONFIG && (window.CONFIG.mascotes || window.CONFIG.MASCOTES)) {
@@ -75,45 +71,73 @@
             return configMascotes.coruja || Object.values(configMascotes)[0];
         },
 
-        // Retorna mensagem formatada para o evento ocorrido
         falar(evento, dados = {}) {
             const m = this.getMascoteAtual();
             const fallbackCat = MASCOTES_DEFAULT.coruja.frases;
             const frasesObj = m.frases || fallbackCat;
-            let frases = frasesObj[evento] || fallbackCat[evento] || frasesObj.inicio || ["Vamos lá!"];
 
-            let fraseSorteada = frases[Math.floor(Math.random() * frases.length)];
+            let listaFrases = frasesObj[evento];
+            if (!listaFrases) {
+                if (evento === 'erro' && m.falasErro) listaFrases = m.falasErro;
+                else if (evento === 'acerto' && m.falasAcerto) listaFrases = m.falasAcerto;
+                else listaFrases = fallbackCat[evento] || ["Vamos lá!"];
+            }
 
-            // Substitui variáveis dinâmicas se houver
+            let fraseSorteada = listaFrases[Math.floor(Math.random() * listaFrases.length)];
+
             if (dados.multiplicador) {
                 fraseSorteada = fraseSorteada.replace('{mult}', dados.multiplicador);
             }
 
             return {
-                icone: m.icone || '🦉',
+                icone: m.icone || m.emoji || '🦉',
                 nome: m.nome || 'Mascote',
                 texto: fraseSorteada
             };
         },
 
-        // Renderiza o componente visual do mascote e balão no container indicado
+        // Renderiza inicialmente OCULTO fora da tela (não atrapalha a visão da conta)
         renderizar(containerId) {
+            limparTimer();
             const container = document.getElementById(containerId);
             if (!container) return;
 
-            const dados = this.falar('inicio');
+            const m = this.getMascoteAtual();
+            const icone = m.icone || m.emoji || '🦉';
+            const nome = m.nome || 'Mascote';
 
             container.innerHTML = `
-                <div class="mascote-container" id="mascote-box-elem">
-                    <div class="mascote-avatar" id="mascote-avatar-elem" title="${dados.nome}">${dados.icone}</div>
-                    <div class="mascote-balao" id="mascote-balao-elem">
-                        ${dados.texto}
-                    </div>
+                <div class="mascote-container oculto-mascote" id="mascote-box-elem">
+                    <div class="mascote-avatar" id="mascote-avatar-elem" title="${nome}">${icone}</div>
+                    <div class="mascote-balao" id="mascote-balao-elem"></div>
                 </div>
             `;
         },
 
-        // Atualiza a fala dinamicamente durante o jogo
+        // Desliza o mascote para dentro da tela e agenda a saída automática
+        mostrarTemporariamente(duracaoMs = 2600) {
+            limparTimer();
+            const boxElem = document.getElementById('mascote-box-elem');
+            if (!boxElem) return;
+
+            boxElem.classList.remove('oculto-mascote');
+            boxElem.classList.add('mostrar-mascote');
+
+            timerEsconder = setTimeout(() => {
+                this.esconder();
+            }, duracaoMs);
+        },
+
+        // Recolhe o mascote de volta para fora da tela
+        esconder() {
+            limparTimer();
+            const boxElem = document.getElementById('mascote-box-elem');
+            if (!boxElem) return;
+            boxElem.classList.remove('mostrar-mascote');
+            boxElem.classList.add('oculto-mascote');
+        },
+
+        // Aciona o mascote em eventos específicos (combo, erro, etc.)
         atualizarFala(evento, dados = {}) {
             const balaoElem = document.getElementById('mascote-balao-elem');
             const avatarElem = document.getElementById('mascote-avatar-elem');
@@ -122,20 +146,17 @@
 
             const res = this.falar(evento, dados);
             if (avatarElem) avatarElem.textContent = res.icone;
-            if (boxElem && !dados.manterModoDuolingo) {
+            if (boxElem) {
                 boxElem.classList.remove('mascote-modo-duolingo');
             }
 
             balaoElem.innerHTML = res.texto;
-
-            // Efeito visual sutil de pulso ao falar
-            balaoElem.classList.remove('balao-animar');
-            void balaoElem.offsetWidth; // reflow
-            balaoElem.classList.add('balao-animar');
+            const tempoExibicao = (evento === 'erro') ? 3200 : 2500;
+            this.mostrarTemporariamente(tempoExibicao);
         },
 
-        // M6: Define uma fala pedagógica direta no balão (com estilo Duolingo opcional)
-        falarTextoDireto(htmlTexto, modoDuolingo = false) {
+        // Exibe uma fala curta (ex: dica passo a passo) deslizando da lateral e saindo depois
+        falarTextoDireto(htmlTexto, modoDuolingo = false, duracaoMs = 3800) {
             const balaoElem = document.getElementById('mascote-balao-elem');
             const boxElem = document.getElementById('mascote-box-elem');
             if (!balaoElem) return;
@@ -145,9 +166,7 @@
             }
 
             balaoElem.innerHTML = htmlTexto;
-            balaoElem.classList.remove('balao-animar');
-            void balaoElem.offsetWidth;
-            balaoElem.classList.add('balao-animar');
+            this.mostrarTemporariamente(duracaoMs);
         }
     };
 

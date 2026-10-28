@@ -1,7 +1,7 @@
 /* ==========================================================================
-   8. js/teclado.js — Teclado Virtual (3×4) e Físico com Auto-Avanço (window.Teclado)
-   Redesign: Sem botão Confirmar (✓). Auto-avanço imediato ao atingir a
-   quantidade de dígitos da resposta correta.
+   8. js/teclado.js — Teclado Virtual (3×4) e Físico com Sublinhados (_ / __)
+   - Substitui o '?' por sublinhados sincronizados em tempo real
+   - Suporta tanto a conta direta quanto o Passo a Passo por coluna (U -> D)
    ========================================================================== */
 
 (function () {
@@ -10,13 +10,16 @@
   window.Teclado = {
     entradaAtual: '',
     tamanhoAlvo: 1,
+    modoPassoColuna: false,
     bloqueado: false,
     aoCompletarCallback: null,
+    aoDigitarParcialCallback: null,
     _eventosRegistrados: false,
 
-    // Inicializa o teclado e conecta o callback de verificação do Modo Desafio
-    inicializar: function (callbackVerificacao) {
+    // Inicializa o teclado e conecta os callbacks de verificação e atualização em tempo real
+    inicializar: function (callbackVerificacao, callbackParcial) {
       this.aoCompletarCallback = callbackVerificacao;
+      this.aoDigitarParcialCallback = callbackParcial || null;
       this.entradaAtual = '';
       this.bloqueado = false;
 
@@ -28,10 +31,11 @@
       this._atualizarDisplay();
     },
 
-    // Prepara o display e define quantos dígitos a nova resposta possui
-    prepararParaNovaConta: function (respostaCorreta) {
+    // Prepara o display e define quantos dígitos a resposta (ou a coluna atual) possui
+    prepararParaNovaConta: function (respostaCorreta, ehModoPassoColuna) {
       this.entradaAtual = '';
       this.tamanhoAlvo = String(respostaCorreta).length;
+      this.modoPassoColuna = Boolean(ehModoPassoColuna);
       this.bloqueado = false;
 
       var elDisplay = document.getElementById('display-resposta');
@@ -42,11 +46,9 @@
       this._atualizarDisplay();
     },
 
-    // Registra cliques nos botões numéricos virtuais e teclas físicas do computador
     _registrarEventosDOM: function () {
       var self = this;
 
-      // Cliques no Teclado Virtual (0–9 e Apagar ⌫)
       var botoes = document.querySelectorAll('.tecla-num');
       for (var i = 0; i < botoes.length; i++) {
         botoes[i].addEventListener('click', function (e) {
@@ -55,11 +57,13 @@
         });
       }
 
-      // Digitação no Teclado Físico (apenas números e Backspace)
       document.addEventListener('keydown', function (e) {
         var telaJogo = document.getElementById('tela-jogo');
         if (!telaJogo || telaJogo.classList.contains('oculto')) return;
-        if (!window.Modos || !window.Modos.partidaAtiva || window.Modos.modoAtual !== 'desafio') return;
+        if (!window.Modos || !window.Modos.partidaAtiva) return;
+
+        var elTeclado = document.getElementById('container-teclado');
+        if (elTeclado && elTeclado.classList.contains('oculto')) return;
 
         if (e.key >= '0' && e.key <= '9') {
           e.preventDefault();
@@ -71,7 +75,6 @@
       });
     },
 
-    // Processa cada dígito ou comando de apagar e aciona o auto-avanço
     _processarTecla: function (tecla) {
       if (this.bloqueado || !tecla) return;
 
@@ -83,12 +86,10 @@
         return;
       }
 
-      // Adiciona o dígito se ainda não atingiu o tamanho da resposta certa
       if (this.entradaAtual.length < this.tamanhoAlvo) {
         this.entradaAtual += String(tecla);
         this._atualizarDisplay();
 
-        // AUTO-AVANÇO: Assim que igualar a quantidade de dígitos da resposta, confere!
         if (this.entradaAtual.length === this.tamanhoAlvo) {
           var valorFinal = this.entradaAtual;
           if (typeof this.aoCompletarCallback === 'function') {
@@ -98,22 +99,37 @@
       }
     },
 
-    // Atualiza o texto do display da conta
     _atualizarDisplay: function () {
+      if (typeof this.aoDigitarParcialCallback === 'function') {
+        this.aoDigitarParcialCallback(this.entradaAtual);
+        return;
+      }
+
       var elDisplay = document.getElementById('display-resposta');
       if (!elDisplay) return;
 
-      elDisplay.textContent = this.entradaAtual.length > 0 ? this.entradaAtual : '?';
+      if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+        window.Visual.atualizarVisorSublinhado(elDisplay, this.entradaAtual, this.tamanhoAlvo, undefined, null);
+      } else {
+        var sublinhados = [];
+        for (var i = 0; i < this.tamanhoAlvo; i++) {
+          sublinhados.push(i < this.entradaAtual.length ? this.entradaAtual.charAt(i) : '_');
+        }
+        elDisplay.textContent = sublinhados.join(' ');
+      }
     },
 
-    // Mostra a resposta correta em vermelho por 0,3s quando o aluno erra e depois avança
     mostrarErroTemporario: function (respostaCerta, duracaoMs, callbackFim) {
       var self = this;
       this.bloqueado = true;
 
       var elDisplay = document.getElementById('display-resposta');
       if (elDisplay) {
-        elDisplay.textContent = String(respostaCerta);
+        if (window.Visual && typeof window.Visual.atualizarVisorSublinhado === 'function') {
+          window.Visual.atualizarVisorSublinhado(elDisplay, String(respostaCerta), String(respostaCerta).length, undefined, null);
+        } else {
+          elDisplay.textContent = String(respostaCerta);
+        }
         elDisplay.classList.add('display-erro', 'tremer');
       }
 
